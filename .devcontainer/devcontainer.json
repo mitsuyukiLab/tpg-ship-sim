@@ -4,7 +4,7 @@
     "name": "Docker from Docker Compose",
     "dockerComposeFile": "docker-compose.yml",
     "service": "devcontainer",
-    "workspaceFolder": "/workspace",
+    "workspaceFolder": "/tpg-ship-sim",
     // Use this environment variable if you need to bind mount your local source code into a new container.
     // "remoteEnv": {
     //     "LOCAL_WORKSPACE_FOLDER": "${localWorkspaceFolder}"
@@ -17,7 +17,9 @@
             "extensions": [
                 "ms-python.python",
                 "ms-toolsai.jupyter",
-                "ms-python.black-formatter"
+                "ms-python.black-formatter",
+                "ms-python.flake8",
+                "ms-python.isort"
             ]
         }
     }
