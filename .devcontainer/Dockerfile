@@ -1,7 +1,7 @@
 FROM python:3
 
 USER root
-WORKDIR /workspace
+WORKDIR /tpg-ship-sim
 
 RUN apt-get update && apt-get install -y \
     sudo \

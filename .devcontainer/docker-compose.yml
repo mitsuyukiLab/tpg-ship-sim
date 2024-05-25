@@ -6,7 +6,7 @@ services:
       context: ..
       dockerfile: .devcontainer/Dockerfile
     volumes:
-      - ..:/workspace:cached
+      - ..:/tpg-ship-sim:cached
     command: /bin/sh -c "while sleep 1000; do :; done"
     user: root
 volumes:
