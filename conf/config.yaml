@@ -1,0 +1,2 @@
+env:
+  typhoon_data_path: "data/typhoon_data_2019_6_interval.csv"
