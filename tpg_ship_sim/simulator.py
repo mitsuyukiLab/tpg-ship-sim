@@ -1,4 +1,4 @@
-from tpg_ship_sim import forecaster, tpg_ship, storage_base, support_ship, utils
+from tpg_ship_sim.model import forecaster, tpg_ship, storage_base, support_ship
 import polars as pl
 from datetime import datetime, timedelta, timezone
 from dateutil import tz
