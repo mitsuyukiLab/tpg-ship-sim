@@ -1,2 +1,11 @@
 env:
   typhoon_data_path: "data/typhoon_data_2019_6_interval.csv"
+
+output_env:
+  tpg_ship_log_file_name: "tpg_ship_1.csv"
+  storage_base_log_file_name: "storage_base_1.csv"
+  support_ship_1_log_file_name: "support_ship_1.csv"
+  support_ship_2_log_file_name: "support_ship_2.csv"
+  png_map_folder_name: "png_map/"
+  png_graph_folder_name: "png_graph/"
+  png_map_graph_folder_name: "png_map_graph/"
