@@ -7,6 +7,7 @@ RUN apt-get update && apt-get install -y \
     sudo \
     git \
     curl \
+    python3-opencv \
     && apt-get clean \
     && rm -rf /var/lib/apt/lists/*
 
@@ -26,6 +27,8 @@ RUN python -m pip install numpy \
     SciencePlots \
     opencv-python \
     jupyterlab
+
+RUN pip install tqdm
 
 # Linter and Formatter
 RUN pip install flake8 black isort
