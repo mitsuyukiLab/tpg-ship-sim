@@ -1,18 +1,15 @@
-import cartopy.crs as ccrs
-import matplotlib.pyplot as plt
-import polars as pl
-import numpy as np
-import math
-from numpy import linalg as LA
-import cartopy.feature as cfeature
-from PIL import Image
-import matplotlib.patches as patches
-from datetime import datetime, timedelta, timezone
-from dateutil import tz
 import os
-import cv2
-import scienceplots
+from datetime import datetime, timedelta, timezone
 
+import cartopy.crs as ccrs
+import cartopy.feature as cfeature
+import cv2
+import matplotlib.patches as patches
+import matplotlib.pyplot as plt
+import numpy as np
+import polars as pl
+import scienceplots
+from PIL import Image
 from tqdm import tqdm
 
 

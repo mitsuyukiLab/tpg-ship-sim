@@ -2,9 +2,10 @@
 # 予想したデータを受け渡す役割を持つのでForecasterとした
 # 現状は真のデータから期間分のデータを取り出すこと以外の能力はない
 
-from geopy.distance import geodesic
-import polars as pl
 import random
+
+import polars as pl
+from geopy.distance import geodesic
 
 
 class Forecaster:
