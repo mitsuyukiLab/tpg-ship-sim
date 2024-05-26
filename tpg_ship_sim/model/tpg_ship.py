@@ -1,3 +1,4 @@
+import math
 import numpy as np
 import polars as pl
 from geopy.distance import geodesic
@@ -543,7 +544,7 @@ class TPGship:
                 # 座標間の距離から到着時刻を計算する
                 if ship_speed_kmh == 0:
                     ship_speed_kmh = self.max_speed * 1.852
-                ship_catch_time = np.ceil(ship_typhoon_dis / ship_speed_kmh)
+                ship_catch_time = math.ceil(ship_typhoon_dis / ship_speed_kmh)
 
                 # 現時刻から台風がその地点に到達するまでにかかる時間を出す
                 typhoon_arrival_time = int(
