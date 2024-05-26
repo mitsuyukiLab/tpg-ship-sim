@@ -1,9 +1,10 @@
-from tpg_ship_sim import forecaster, tpg_ship, storage_base, support_ship, utils
-import polars as pl
 from datetime import datetime, timedelta, timezone
-from dateutil import tz
 
+import polars as pl
+from dateutil import tz
 from tqdm import tqdm
+
+from tpg_ship_sim.model import forecaster, storage_base, support_ship, tpg_ship
 
 
 def get_TY_start_time(year, TY_data):
@@ -129,7 +130,13 @@ def cal_maxspeedpower(max_speed, storage, storage_method, body_num):
 ############################################################################################
 
 
-def simulate(typhoon_data_path, output_folder_path) -> None:
+def simulate(
+    typhoon_data_path,
+    tpg_ship_log_file_path,
+    storage_base_log_file_path,
+    support_ship_1_log_file_path,
+    support_ship_2_log_file_path,
+) -> None:
     year = 2019
     time_step = 6
     UTC = timezone(timedelta(hours=+0), "UTC")
@@ -543,10 +550,10 @@ def simulate(typhoon_data_path, output_folder_path) -> None:
             }
         )
 
-    GS_data.write_csv(output_folder_path + "/tpg_ship_1.csv")
-    stBASE_data.write_csv(output_folder_path + "/storage_base_1.csv")
-    spSHIP1_data.write_csv(output_folder_path + "/support_ship_1.csv")
-    spSHIP2_data.write_csv(output_folder_path + "/support_ship_2.csv")
+    GS_data.write_csv(tpg_ship_log_file_path)
+    stBASE_data.write_csv(storage_base_log_file_path)
+    spSHIP1_data.write_csv(support_ship_1_log_file_path)
+    spSHIP2_data.write_csv(support_ship_2_log_file_path)
 
 
 ############################################################################################

@@ -26,12 +26,15 @@ def main(cfg: DictConfig) -> None:
     png_graph_folder_name = cfg.output_env.png_graph_folder_name
     png_map_graph_folder_name = cfg.output_env.png_map_graph_folder_name
 
-    typhoon_data = pl.read_csv(typhoon_data_path)
-    typhoon_data_length = len(typhoon_data)
-
     progress_bar = tqdm(total=6, desc=output_folder_path)
 
-    simulator.simulate(typhoon_data_path, output_folder_path)
+    simulator.simulate(
+        typhoon_data_path,
+        output_folder_path + "/" + tpg_ship_log_file_name,
+        output_folder_path + "/" + storage_base_log_file_name,
+        output_folder_path + "/" + support_ship_1_log_file_name,
+        output_folder_path + "/" + support_ship_2_log_file_name,
+    )
     progress_bar.update(1)
 
     utils.draw_map(
@@ -52,8 +55,13 @@ def main(cfg: DictConfig) -> None:
     )
     progress_bar.update(1)
 
+    # TODO : Just for getting the length of simulation data.
+    sim_data_length = len(
+        pl.read_csv(output_folder_path + "/" + tpg_ship_log_file_name)
+    )
+
     utils.merge_map_graph(
-        typhoon_data_length,
+        sim_data_length,
         output_folder_path + "/" + png_map_folder_name,
         output_folder_path + "/" + png_graph_folder_name,
         output_folder_path + "/" + png_map_graph_folder_name,
