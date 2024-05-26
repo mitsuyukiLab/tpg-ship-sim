@@ -130,7 +130,13 @@ def cal_maxspeedpower(max_speed, storage, storage_method, body_num):
 ############################################################################################
 
 
-def simulate(typhoon_data_path, output_folder_path) -> None:
+def simulate(
+    typhoon_data_path,
+    tpg_ship_log_file_path,
+    storage_base_log_file_path,
+    support_ship_1_log_file_path,
+    support_ship_2_log_file_path,
+) -> None:
     year = 2019
     time_step = 6
     UTC = timezone(timedelta(hours=+0), "UTC")
@@ -544,10 +550,10 @@ def simulate(typhoon_data_path, output_folder_path) -> None:
             }
         )
 
-    GS_data.write_csv(output_folder_path + "/tpg_ship_1.csv")
-    stBASE_data.write_csv(output_folder_path + "/storage_base_1.csv")
-    spSHIP1_data.write_csv(output_folder_path + "/support_ship_1.csv")
-    spSHIP2_data.write_csv(output_folder_path + "/support_ship_2.csv")
+    GS_data.write_csv(tpg_ship_log_file_path)
+    stBASE_data.write_csv(storage_base_log_file_path)
+    spSHIP1_data.write_csv(support_ship_1_log_file_path)
+    spSHIP2_data.write_csv(support_ship_2_log_file_path)
 
 
 ############################################################################################

@@ -28,7 +28,13 @@ def main(cfg: DictConfig) -> None:
 
     progress_bar = tqdm(total=6, desc=output_folder_path)
 
-    simulator.simulate(typhoon_data_path, output_folder_path)
+    simulator.simulate(
+        typhoon_data_path,
+        output_folder_path + "/" + tpg_ship_log_file_name,
+        output_folder_path + "/" + storage_base_log_file_name,
+        output_folder_path + "/" + support_ship_1_log_file_name,
+        output_folder_path + "/" + support_ship_2_log_file_name,
+    )
     progress_bar.update(1)
 
     utils.draw_map(
