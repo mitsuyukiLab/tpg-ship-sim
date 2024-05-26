@@ -5,20 +5,24 @@
     "python.analysis.completeFunctionParens": true,
     "python.analysis.typeCheckingMode": "strict",
     "python.analysis.diagnosticMode": "workspace",
-    // 言語サーバーはPylanceを使用
     "python.languageServer": "Pylance",
-    //     "--indent-size=4",
-    //     "--max-line-length",
-    //     "160",
-    //     "--ignore=E111, E114, E402, E501"
-    // ],
     "[python]": {
-        "editor.tabSize": 4, // インデントレベルは4
-        "editor.formatOnSave": true, // 保存時に自動整形を行う
-        "editor.formatOnPaste": false, // ペースト時に自動整形を行わない
-        "editor.formatOnType": false, // 入力後に自動整形を行わない
-        "editor.rulers": [
-            120
-        ], // 行の長さを160文字に制限
+        "editor.tabSize": 4,
+        "editor.defaultFormatter": "ms-python.black-formatter",
+        "editor.formatOnSave": true,
+        "editor.formatOnPaste": false,
+        "editor.formatOnType": false,
+        "editor.codeActionsOnSave": {
+            "source.organizeImports": "explicit"
+        }
     },
+    "isort.args": [
+        "--profile",
+        "black"
+    ],
+    "flake8.args": [
+        "--max-line-length=100",
+        "--max-complexity=10",
+        "--ignore=E203,E501,W503"
+    ],
 }

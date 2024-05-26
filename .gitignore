@@ -1,4 +1,7 @@
 
+# for Mac
+.DS_Store
+
 # Hydra
 outputs/
 
