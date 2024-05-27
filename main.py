@@ -5,6 +5,7 @@ from omegaconf import DictConfig
 from tqdm import tqdm
 
 from tpg_ship_sim import simulator, utils
+from tpg_ship_sim.model import storage_base
 
 
 @hydra.main(config_name="config", version_base=None, config_path="conf")
@@ -29,9 +30,13 @@ def main(cfg: DictConfig) -> None:
     # TODO Support ship 1
     # TODO Support ship 2
 
+    base_locate = (24, 153)  # 南鳥島
+    st_base_max_storage_wh = 210 * (10**9)
+    st_base = storage_base.storage_BASE(base_locate, st_base_max_storage_wh)
+
     simulator.simulate(
         # TODO TPG ship
-        # TODO Storage base
+        st_base,  # Storage base
         # TODO Support ship 1
         # TODO Support ship 2
         typhoon_data_path,
