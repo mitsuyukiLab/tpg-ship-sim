@@ -131,6 +131,10 @@ def cal_maxspeedpower(max_speed, storage, storage_method, body_num):
 
 
 def simulate(
+    # TODO TPG ship
+    # TODO Storage base
+    # TODO Support ship 1
+    # TODO Support ship 2
     typhoon_data_path,
     tpg_ship_log_file_path,
     storage_base_log_file_path,

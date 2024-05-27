@@ -1,14 +1,10 @@
-from tpg_ship_sim import (
-    simulator,
-    utils,
-)
+import hydra
 import polars as pl
-
+from hydra.core.hydra_config import HydraConfig
+from omegaconf import DictConfig
 from tqdm import tqdm
 
-import hydra
-from omegaconf import DictConfig
-from hydra.core.hydra_config import HydraConfig
+from tpg_ship_sim import simulator, utils
 
 
 @hydra.main(config_name="config", version_base=None, config_path="conf")
@@ -28,7 +24,16 @@ def main(cfg: DictConfig) -> None:
 
     progress_bar = tqdm(total=6, desc=output_folder_path)
 
+    # TODO TPG ship
+    # TODO Storage base
+    # TODO Support ship 1
+    # TODO Support ship 2
+
     simulator.simulate(
+        # TODO TPG ship
+        # TODO Storage base
+        # TODO Support ship 1
+        # TODO Support ship 2
         typhoon_data_path,
         output_folder_path + "/" + tpg_ship_log_file_name,
         output_folder_path + "/" + storage_base_log_file_name,
