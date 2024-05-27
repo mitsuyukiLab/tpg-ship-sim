@@ -4,7 +4,7 @@ import polars as pl
 from dateutil import tz
 from tqdm import tqdm
 
-from tpg_ship_sim.model import forecaster, storage_base, support_ship, tpg_ship
+from tpg_ship_sim.model import forecaster, support_ship, tpg_ship
 
 
 def get_TY_start_time(year, TY_data):
@@ -131,6 +131,10 @@ def cal_maxspeedpower(max_speed, storage, storage_method, body_num):
 
 
 def simulate(
+    # TODO TPG ship
+    st_base,  # Storage base
+    # TODO Support ship 1
+    # TODO Support ship 2
     typhoon_data_path,
     tpg_ship_log_file_path,
     storage_base_log_file_path,
@@ -184,10 +188,6 @@ def simulate(
     ship1 = tpg_ship.TPGship()
     ship1.forecast_time = forecaster.Forecaster.forecast_time
 
-    # 中継貯蔵拠点設定
-    storage_base.storage_BASE.max_storage = ship1.max_storage * 3
-    st_base = storage_base.storage_BASE()
-
     # 運搬船設定
     support_ship.support_SHIP.max_storage = ship1.max_storage * 0.5
     supportSHIP1 = support_ship.support_SHIP()
@@ -195,13 +195,13 @@ def simulate(
 
     # 拠点位置に関する設定
     # 発電船拠点位置
-    ship1.base_lat = st_base.lat
-    ship1.base_lon = st_base.lon
+    ship1.base_lat = st_base.locate[0]
+    ship1.base_lon = st_base.locate[1]
 
     ship1.TY_start_time_list = get_TY_start_time(year, typhoon_data)
     # 待機位置に関する設定
-    ship1.standby_lat = st_base.lat
-    ship1.standby_lon = st_base.lon
+    ship1.standby_lat = st_base.locate[0]
+    ship1.standby_lon = st_base.locate[1]
 
     # ship1.sub_judge_energy_storage_per = 20
 
