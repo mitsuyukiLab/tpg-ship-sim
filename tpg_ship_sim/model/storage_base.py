@@ -1,6 +1,6 @@
 class storage_BASE:
     """
-    ############################### class storage_BASE ###############################
+    ############################### class storage_base ###############################
 
     [ 説明 ]
 
@@ -41,9 +41,13 @@ class storage_BASE:
     brance_condition = "while in storage"
 
     # 南鳥島
-    lat = 24
-    lon = 153
-    locate = (lat, lon)
+    # lat = 24
+    # lon = 153
+    # locate = (lat, lon)
+
+    def __init__(self, locate, max_storage) -> None:
+        self.locate = locate
+        self.max_storage = max_storage
 
     ####################################  メソッド  ######################################
 
