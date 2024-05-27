@@ -1,6 +1,10 @@
 env:
   typhoon_data_path: "data/typhoon_data_2019_6_interval.csv"
 
+storage_base:
+  locate: [24, 153] # lat, lon
+  max_storage_wh: 210000000000 # W
+
 output_env:
   tpg_ship_log_file_name: "tpg_ship_1.csv"
   storage_base_log_file_name: "storage_base_1.csv"

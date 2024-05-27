@@ -26,13 +26,14 @@ def main(cfg: DictConfig) -> None:
     progress_bar = tqdm(total=6, desc=output_folder_path)
 
     # TODO TPG ship
-    # TODO Storage base
+
+    # Storage base
+    base_locate = cfg.storage_base.locate
+    st_base_max_storage_wh = cfg.storage_base.max_storage_wh
+    st_base = storage_base.storage_BASE(base_locate, st_base_max_storage_wh)
+
     # TODO Support ship 1
     # TODO Support ship 2
-
-    base_locate = (24, 153)  # 南鳥島
-    st_base_max_storage_wh = 210 * (10**9)
-    st_base = storage_base.storage_BASE(base_locate, st_base_max_storage_wh)
 
     simulator.simulate(
         # TODO TPG ship
