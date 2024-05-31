@@ -1,9 +1,23 @@
 env:
   typhoon_data_path: "data/typhoon_data_2019_6_interval.csv"
 
+forecaster:
+  forecast_time: 120 # h
+  forecast_error_slope: 0.1 # 予報誤差（実際は誤差を計算するための一次関数の傾き）
+
 storage_base:
   locate: [24, 153] # lat, lon
-  max_storage_wh: 210000000000 # W
+  max_storage_wh: 210000000000 # Wh
+
+support_ship_1:
+  supply_base_locate: [34.74, 134.78] # lat, lon （高砂水素パーク）
+  max_storage_wh: 35000000000 # Wh
+  ship_speed_kt: 5 # kt
+
+support_ship_2:
+  supply_base_locate: [34.74, 134.78] # lat, lon
+  max_storage_wh: 35000000000 # Wh
+  ship_speed_kt: 5 # kt
 
 output_env:
   tpg_ship_log_file_name: "tpg_ship_1.csv"

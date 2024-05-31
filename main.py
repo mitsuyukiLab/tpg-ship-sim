@@ -5,7 +5,7 @@ from omegaconf import DictConfig
 from tqdm import tqdm
 
 from tpg_ship_sim import simulator, utils
-from tpg_ship_sim.model import storage_base
+from tpg_ship_sim.model import forecaster, storage_base, support_ship
 
 
 @hydra.main(config_name="config", version_base=None, config_path="conf")
@@ -27,19 +27,42 @@ def main(cfg: DictConfig) -> None:
 
     # TODO TPG ship
 
+    # Forecaster
+    forecast_time = cfg.forecaster.forecast_time
+    forecast_error_slope = cfg.forecaster.forecast_error_slope
+    typhoon_path_forecaster = forecaster.Forecaster(forecast_time, forecast_error_slope)
+
     # Storage base
     base_locate = cfg.storage_base.locate
     st_base_max_storage_wh = cfg.storage_base.max_storage_wh
     st_base = storage_base.storage_BASE(base_locate, st_base_max_storage_wh)
 
-    # TODO Support ship 1
-    # TODO Support ship 2
+    # Support ship 1
+    support_ship_1_supply_base_locate = cfg.support_ship_1.supply_base_locate
+    support_ship_1_max_storage_wh = cfg.support_ship_1.max_storage_wh
+    support_ship_1_max_speed_kt = cfg.support_ship_1.ship_speed_kt
+    support_ship_1 = support_ship.support_SHIP(
+        support_ship_1_supply_base_locate,
+        support_ship_1_max_storage_wh,
+        support_ship_1_max_speed_kt,
+    )
+
+    # Support ship 2
+    support_ship_2_supply_base_locate = cfg.support_ship_2.supply_base_locate
+    support_ship_2_max_storage_wh = cfg.support_ship_2.max_storage_wh
+    support_ship_2_max_speed_kt = cfg.support_ship_2.ship_speed_kt
+    support_ship_2 = support_ship.support_SHIP(
+        support_ship_2_supply_base_locate,
+        support_ship_2_max_storage_wh,
+        support_ship_2_max_speed_kt,
+    )
 
     simulator.simulate(
         # TODO TPG ship
+        typhoon_path_forecaster,  # Forecaster
         st_base,  # Storage base
-        # TODO Support ship 1
-        # TODO Support ship 2
+        support_ship_1,  # Support ship 1
+        support_ship_2,  # Support ship 2
         typhoon_data_path,
         output_folder_path + "/" + tpg_ship_log_file_name,
         output_folder_path + "/" + storage_base_log_file_name,
