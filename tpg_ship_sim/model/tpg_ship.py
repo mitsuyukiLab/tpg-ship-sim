@@ -1,4 +1,5 @@
 import math
+
 import numpy as np
 import polars as pl
 from geopy.distance import geodesic
@@ -81,11 +82,39 @@ class TPGship:
 
     ####################################  パラメータ  ######################################
 
-    max_storage = 0
-    generator_output = 0
     wind_propulsion_power = 0
     generating_facilities_need_max_power = 0
     max_speed_power = 0
+
+    def __init__(
+        self,
+        first_locate,
+        hull_num,
+        storage_method,
+        max_storage_wh,
+        generator_output_w,
+        ship_return_speed_kt,
+        ship_max_speed_kt,
+        forecast_weight,
+        typhoon_effective_range,
+        judge_energy_storage_per,
+        sub_judge_energy_storage_per,
+        judge_time_times,
+    ) -> None:
+        self.ship_lat = first_locate[0]
+        self.ship_lon = first_locate[1]
+        self.hull_num = hull_num
+        self.storage_method = storage_method
+        self.max_storage = max_storage_wh
+        self.generator_output = generator_output_w
+        self.nomal_ave_speed = ship_return_speed_kt
+        self.max_speed = ship_max_speed_kt
+
+        self.forecast_weight = forecast_weight
+        self.effective_range = typhoon_effective_range
+        self.judge_energy_storage_per = judge_energy_storage_per
+        self.sub_judge_energy_storage_per = sub_judge_energy_storage_per
+        self.judge_time_times = judge_time_times
 
     ####################################  状態量  ######################################
 
@@ -119,8 +148,6 @@ class TPGship:
         # 発電船の行動に関する状態量(現状のクラス定義では外部入力不可(更新が内部関数のため))
         self.speed_kt = 0
         self.target_name = "base station"
-        self.ship_lat = self.base_lat
-        self.ship_lon = self.base_lon
         self.target_lat = self.base_lat
         self.target_lon = self.base_lon
         self.target_distance = 0
@@ -132,19 +159,9 @@ class TPGship:
         self.next_ship_TY_dis = np.nan
         self.brance_condition = "start forecast"
 
-        # 発電船行動用パラメータ
-        # シミュレーションに風向、風速が入ってくればその場で出せる船速に変動できるようにするので将来的に消えるパラメータ
-        self.nomal_ave_speed = 8
-        self.max_speed = 20
-
         # 発電船自律判断システム設定
-        self.forecast_weight = 30
-        self.effective_range = 100
-        self.judge_energy_storage_per = 90
-        self.sub_judge_energy_storage_per = 40
         self.judge_direction = 10
         self.standby_via_base = 0
-        self.judge_time_times = 1.1
 
     ####################################  メソッド  ######################################
 

@@ -5,12 +5,13 @@ from omegaconf import DictConfig
 from tqdm import tqdm
 
 from tpg_ship_sim import simulator, utils
-from tpg_ship_sim.model import forecaster, storage_base, support_ship
+from tpg_ship_sim.model import forecaster, storage_base, support_ship, tpg_ship
 
 
 @hydra.main(config_name="config", version_base=None, config_path="conf")
 def main(cfg: DictConfig) -> None:
 
+    year = cfg.env.year
     typhoon_data_path = cfg.env.typhoon_data_path
 
     output_folder_path = HydraConfig.get().run.dir
@@ -25,7 +26,33 @@ def main(cfg: DictConfig) -> None:
 
     progress_bar = tqdm(total=6, desc=output_folder_path)
 
-    # TODO TPG ship
+    # TPG ship
+    first_locate = cfg.tpg_ship.first_locate
+    hull_num = cfg.tpg_ship.hull_num
+    storage_method = cfg.tpg_ship.storage_method
+    max_storage_wh = cfg.tpg_ship.max_storage_wh
+    generator_output_w = cfg.tpg_ship.generator_output_w
+    ship_return_speed_kt = cfg.tpg_ship.ship_return_speed_kt
+    ship_max_speed_kt = cfg.tpg_ship.ship_max_speed_kt
+    forecast_weight = cfg.tpg_ship.forecast_weight
+    typhoon_effective_range = cfg.tpg_ship.typhoon_effective_range
+    judge_energy_storage_per = cfg.tpg_ship.judge_energy_storage_per
+    sub_judge_energy_storage_per = cfg.tpg_ship.sub_judge_energy_storage_per
+    judge_time_times = cfg.tpg_ship.judge_time_times
+    tpg_ship_1 = tpg_ship.TPGship(
+        first_locate,
+        hull_num,
+        storage_method,
+        max_storage_wh,
+        generator_output_w,
+        ship_return_speed_kt,
+        ship_max_speed_kt,
+        forecast_weight,
+        typhoon_effective_range,
+        judge_energy_storage_per,
+        sub_judge_energy_storage_per,
+        judge_time_times,
+    )
 
     # Forecaster
     forecast_time = cfg.forecaster.forecast_time
@@ -58,11 +85,12 @@ def main(cfg: DictConfig) -> None:
     )
 
     simulator.simulate(
-        # TODO TPG ship
+        tpg_ship_1,  # TPG ship
         typhoon_path_forecaster,  # Forecaster
         st_base,  # Storage base
         support_ship_1,  # Support ship 1
         support_ship_2,  # Support ship 2
+        year,
         typhoon_data_path,
         output_folder_path + "/" + tpg_ship_log_file_name,
         output_folder_path + "/" + storage_base_log_file_name,
