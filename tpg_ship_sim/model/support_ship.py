@@ -2,7 +2,7 @@ import numpy as np
 from geopy.distance import geodesic
 
 
-class support_SHIP:
+class Support_ship:
     """
     ############################### class support_ship ###############################
 

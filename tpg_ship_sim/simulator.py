@@ -138,7 +138,6 @@ def simulate(
     st_base,  # Storage base
     support_ship_1,  # Support ship 1
     support_ship_2,  # Support ship 2
-    year,
     typhoon_data_path,
     tpg_ship_log_file_path,
     storage_base_log_file_path,
@@ -146,6 +145,7 @@ def simulate(
     support_ship_2_log_file_path,
 ) -> None:
 
+    year = 2019
     time_step = 6
     UTC = timezone(timedelta(hours=+0), "UTC")
     datetime_1_1 = datetime(year, 1, 1, 0, 0, 0, tzinfo=tz.gettz("UTC"))
@@ -188,9 +188,9 @@ def simulate(
     tpg_ship_1.forecast_time = forecaster.Forecaster.forecast_time
 
     # 運搬船設定
-    # support_ship.support_SHIP.max_storage = tpg_ship_1.max_storage * 0.5
-    # support_ship_1 = support_ship.support_SHIP()
-    # support_ship_2 = support_ship.support_SHIP()
+    # support_ship.Support_ship.max_storage = tpg_ship_1.max_storage * 0.5
+    # support_ship_1 = support_ship.Support_ship()
+    # support_ship_2 = support_ship.Support_ship()
 
     # 拠点位置に関する設定
     # 発電船拠点位置
@@ -202,7 +202,7 @@ def simulate(
     tpg_ship_1.standby_lat = st_base.locate[0]
     tpg_ship_1.standby_lon = st_base.locate[1]
 
-    # tpg_ship_1.sub_judge_energy_storage_per = 20
+    # tpg_ship_1.govia_base_judge_energy_storage_per = 20
 
     tpg_ship_1.set_initial_states()
 

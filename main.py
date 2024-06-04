@@ -11,7 +11,6 @@ from tpg_ship_sim.model import forecaster, storage_base, support_ship, tpg_ship
 @hydra.main(config_name="config", version_base=None, config_path="conf")
 def main(cfg: DictConfig) -> None:
 
-    year = cfg.env.year
     typhoon_data_path = cfg.env.typhoon_data_path
 
     output_folder_path = HydraConfig.get().run.dir
@@ -27,7 +26,7 @@ def main(cfg: DictConfig) -> None:
     progress_bar = tqdm(total=6, desc=output_folder_path)
 
     # TPG ship
-    first_locate = cfg.tpg_ship.first_locate
+    initial_position = cfg.tpg_ship.initial_position
     hull_num = cfg.tpg_ship.hull_num
     storage_method = cfg.tpg_ship.storage_method
     max_storage_wh = cfg.tpg_ship.max_storage_wh
@@ -36,11 +35,12 @@ def main(cfg: DictConfig) -> None:
     ship_max_speed_kt = cfg.tpg_ship.ship_max_speed_kt
     forecast_weight = cfg.tpg_ship.forecast_weight
     typhoon_effective_range = cfg.tpg_ship.typhoon_effective_range
-    judge_energy_storage_per = cfg.tpg_ship.judge_energy_storage_per
-    sub_judge_energy_storage_per = cfg.tpg_ship.sub_judge_energy_storage_per
+    govia_base_judge_energy_storage_per = (
+        cfg.tpg_ship.govia_base_judge_energy_storage_per
+    )
     judge_time_times = cfg.tpg_ship.judge_time_times
-    tpg_ship_1 = tpg_ship.TPGship(
-        first_locate,
+    tpg_ship_1 = tpg_ship.TPG_ship(
+        initial_position,
         hull_num,
         storage_method,
         max_storage_wh,
@@ -49,8 +49,7 @@ def main(cfg: DictConfig) -> None:
         ship_max_speed_kt,
         forecast_weight,
         typhoon_effective_range,
-        judge_energy_storage_per,
-        sub_judge_energy_storage_per,
+        govia_base_judge_energy_storage_per,
         judge_time_times,
     )
 
@@ -62,13 +61,13 @@ def main(cfg: DictConfig) -> None:
     # Storage base
     base_locate = cfg.storage_base.locate
     st_base_max_storage_wh = cfg.storage_base.max_storage_wh
-    st_base = storage_base.storage_BASE(base_locate, st_base_max_storage_wh)
+    st_base = storage_base.Storage_base(base_locate, st_base_max_storage_wh)
 
     # Support ship 1
     support_ship_1_supply_base_locate = cfg.support_ship_1.supply_base_locate
     support_ship_1_max_storage_wh = cfg.support_ship_1.max_storage_wh
     support_ship_1_max_speed_kt = cfg.support_ship_1.ship_speed_kt
-    support_ship_1 = support_ship.support_SHIP(
+    support_ship_1 = support_ship.Support_ship(
         support_ship_1_supply_base_locate,
         support_ship_1_max_storage_wh,
         support_ship_1_max_speed_kt,
@@ -78,7 +77,7 @@ def main(cfg: DictConfig) -> None:
     support_ship_2_supply_base_locate = cfg.support_ship_2.supply_base_locate
     support_ship_2_max_storage_wh = cfg.support_ship_2.max_storage_wh
     support_ship_2_max_speed_kt = cfg.support_ship_2.ship_speed_kt
-    support_ship_2 = support_ship.support_SHIP(
+    support_ship_2 = support_ship.Support_ship(
         support_ship_2_supply_base_locate,
         support_ship_2_max_storage_wh,
         support_ship_2_max_speed_kt,
@@ -90,7 +89,6 @@ def main(cfg: DictConfig) -> None:
         st_base,  # Storage base
         support_ship_1,  # Support ship 1
         support_ship_2,  # Support ship 2
-        year,
         typhoon_data_path,
         output_folder_path + "/" + tpg_ship_log_file_name,
         output_folder_path + "/" + storage_base_log_file_name,

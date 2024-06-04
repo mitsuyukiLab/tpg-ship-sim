@@ -1,4 +1,4 @@
-class storage_BASE:
+class Storage_base:
     """
     ############################### class storage_base ###############################
 
@@ -16,8 +16,8 @@ class storage_BASE:
         year (int) : シミュレーションを行う年
         time_step (int) : シミュレーションにおける時間の進み幅[hours]
         current_time (int) : シミュレーション上の現在時刻(unixtime)
-        support_ship_1 (class) : support_SHIPクラスのインスタンスその1
-        support_ship_2 (class) : support_SHIPクラスのインスタンスその2
+        support_ship_1 (class) : Support_shipクラスのインスタンスその1
+        support_ship_2 (class) : Support_shipクラスのインスタンスその2
         TPGship1 (class) : TPGshipクラスのインスタンスその1
 
     属性 :

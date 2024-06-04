@@ -5,7 +5,7 @@ import polars as pl
 from geopy.distance import geodesic
 
 
-class TPGship:
+class TPG_ship:
     """
     ############################### class TPGship ###############################
 
@@ -61,7 +61,7 @@ class TPGship:
         distance_judge_hours (int) : 追従判断基準時間。発電船にとって台風が遠いか近いかを判断する基準。　※本プログラムでは使用しない
         judge_energy_storage_per (int) : 発電船が帰港判断をする蓄電割合。
         effective_range (float) : 発電船が台風下での航行となる台風中心からの距離[km]
-        sub_judge_energy_storage_per (int) : 発電船が拠点経由で目的地に向かう判断をする蓄電割合。
+        govia_base_judge_energy_storage_per (int) : 発電船が拠点経由で目的地に向かう判断をする蓄電割合。
         judge_direction (float) : 発電船が2つの目的地の方位差から行動を判断する時の基準値[度]
         standby_via_base (int) : 待機位置へ拠点を経由して向かう場合のフラグ
         judge_time_times (float) : 台風の補足地点に発電船が最大船速で到着する時間に対し台風が到着する時間が「何倍」である時追うと判断するのかの基準値
@@ -88,7 +88,7 @@ class TPGship:
 
     def __init__(
         self,
-        first_locate,
+        initial_position,
         hull_num,
         storage_method,
         max_storage_wh,
@@ -97,12 +97,11 @@ class TPGship:
         ship_max_speed_kt,
         forecast_weight,
         typhoon_effective_range,
-        judge_energy_storage_per,
-        sub_judge_energy_storage_per,
+        govia_base_judge_energy_storage_per,
         judge_time_times,
     ) -> None:
-        self.ship_lat = first_locate[0]
-        self.ship_lon = first_locate[1]
+        self.ship_lat = initial_position[0]
+        self.ship_lon = initial_position[1]
         self.hull_num = hull_num
         self.storage_method = storage_method
         self.max_storage = max_storage_wh
@@ -112,8 +111,7 @@ class TPGship:
 
         self.forecast_weight = forecast_weight
         self.effective_range = typhoon_effective_range
-        self.judge_energy_storage_per = judge_energy_storage_per
-        self.sub_judge_energy_storage_per = sub_judge_energy_storage_per
+        self.govia_base_judge_energy_storage_per = govia_base_judge_energy_storage_per
         self.judge_time_times = judge_time_times
 
     ####################################  状態量  ######################################
@@ -160,6 +158,7 @@ class TPGship:
         self.brance_condition = "start forecast"
 
         # 発電船自律判断システム設定
+        self.judge_energy_storage_per = 100
         self.judge_direction = 10
         self.standby_via_base = 0
 
@@ -969,7 +968,7 @@ class TPGship:
 
         self.TY_and_base_action = 0
 
-        if self.storage_percentage >= self.sub_judge_energy_storage_per:
+        if self.storage_percentage >= self.govia_base_judge_energy_storage_per:
             if need_time_hours <= TY_catch_time:
                 # 元の目的地に問題なくつけるのであれば即実行
                 self.speed_kt = self.max_speed
@@ -1070,7 +1069,7 @@ class TPGship:
                 self.next_ship_TY_dis = " "
 
             elif (
-                self.storage_percentage >= self.sub_judge_energy_storage_per
+                self.storage_percentage >= self.govia_base_judge_energy_storage_per
             ):  # 少量の蓄電でも戻る場合の基準値を利用した場合
 
                 if typhoon_num == 0:
@@ -1138,7 +1137,7 @@ class TPGship:
             # 待機位置へ帰還
             if typhoon_num == 0:
 
-                if self.storage_percentage >= self.sub_judge_energy_storage_per:
+                if self.storage_percentage >= self.govia_base_judge_energy_storage_per:
                     self.return_base_action(time_step)
                     self.brance_condition = "return standby via base"
                     self.standby_via_base = 1
