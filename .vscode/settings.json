@@ -5,7 +5,7 @@
     "python.analysis.completeFunctionParens": true,
     "python.analysis.typeCheckingMode": "strict",
     "python.analysis.diagnosticMode": "workspace",
-    "python.languageServer": "Pylance",
+    //"python.languageServer": "Pylance",
     "[python]": {
         "editor.tabSize": 4,
         "editor.defaultFormatter": "ms-python.black-formatter",

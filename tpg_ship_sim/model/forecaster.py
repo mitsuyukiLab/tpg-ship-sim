@@ -33,8 +33,12 @@ class Forecaster:
     #############################################################################
     """
 
-    forecast_time = 24 * 365
-    slope = 0.1
+    forecast_time = 0
+    slope = 0
+
+    def __init__(self, forecast_time, forecast_error_slope) -> None:
+        self.forecast_time = forecast_time
+        self.slope = forecast_error_slope
 
     def cal_error_radius_km(self, time_step, advance_time_hour):
         """

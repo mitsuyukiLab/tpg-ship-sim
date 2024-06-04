@@ -2,25 +2,59 @@ import numpy as np
 from geopy.distance import geodesic
 
 
-class support_SHIP:
+class Support_ship:
+    """
+    ############################### class support_ship ###############################
+
+    [ 説明 ]
+
+    このクラスは補助船を作成するクラスです。
+
+    主にTPGshipが生成した電力や水素を貯蔵した中間貯蔵拠点から供給地点に輸送します。
+
+    補助船の能力や状態量もここで定義されることになります。
+
+    ##############################################################################
+
+    引数 :
+        year (int) : シミュレーションを行う年
+        time_step (int) : シミュレーションにおける時間の進み幅[hours]
+        current_time (int) : シミュレーション上の現在時刻(unixtime)
+        storage_base_position (taple) : 中継貯蔵拠点の座標(緯度,経度)
+
+    属性 :
+        supplybase_lat (float) : 供給拠点の緯度
+        supplybase_lon (float) : 供給拠点の経度
+        ship_lat (float) : 補助船のその時刻での緯度
+        ship_lon (float) : 補助船のその時刻での経度
+        max_storage (float) : 中継貯蔵拠点の蓄電容量の上限値
+        support_ship_speed (float) : 補助船の最大船速
+        storage (float) : 中継貯蔵拠点のその時刻での蓄電量
+        ship_gene (int) : 補助船が発生したかどうかのフラグ
+        arrived_supplybase (int) : 供給拠点に到着したかどうかのフラグ
+        arrived_storagebase (int) : 中継貯蔵拠点に到着したかどうかのフラグ
+        target_lat (float) : 補助船の目標地点の緯度
+        target_lon (float) : 補助船の目標地点の経度
+        brance_condition (str) : 補助船の行動の記録
+
+    """
 
     ship_gene = 0
-    max_storage = 0
     storage = 0
     arrived_supplybase = 1
     arrived_storagebase = 0
-    support_ship_speed = 5
 
-    # 高砂水素パーク
-    supplybase_lat = 34.75
-    supplybase_lon = 134.79
-
-    ship_lat = supplybase_lat
-    ship_lon = supplybase_lon
     target_lat = np.nan
     target_lon = np.nan
     brance_condition = "no action"
-    ship_gene = 0
+
+    def __init__(self, supply_base_locate, max_storage_wh, max_speed_kt) -> None:
+        self.supplybase_lat = supply_base_locate[0]
+        self.supplybase_lon = supply_base_locate[1]
+        self.ship_lat = supply_base_locate[0]
+        self.ship_lon = supply_base_locate[1]
+        self.max_storage = max_storage_wh
+        self.support_ship_speed = max_speed_kt
 
     # 状態量計算
     def get_distance(self, storage_base_position):

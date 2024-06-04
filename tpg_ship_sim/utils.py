@@ -414,7 +414,7 @@ def draw_map(
         ax.text(
             168.0,
             view_lat_1 - 1.7 * d_view_lat - 0.5,
-            "SupportSHIP1",
+            "support_ship_1",
             size=15,
             color="black",
             zorder=4,
@@ -445,7 +445,7 @@ def draw_map(
         ax.text(
             168.0,
             view_lat_1 - 3.1 * d_view_lat - 0.5,
-            "SupportSHIP2",
+            "support_ship_2",
             size=15,
             color="black",
             zorder=4,

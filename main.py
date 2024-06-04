@@ -5,7 +5,7 @@ from omegaconf import DictConfig
 from tqdm import tqdm
 
 from tpg_ship_sim import simulator, utils
-from tpg_ship_sim.model import storage_base
+from tpg_ship_sim.model import forecaster, storage_base, support_ship, tpg_ship
 
 
 @hydra.main(config_name="config", version_base=None, config_path="conf")
@@ -25,21 +25,70 @@ def main(cfg: DictConfig) -> None:
 
     progress_bar = tqdm(total=6, desc=output_folder_path)
 
-    # TODO TPG ship
+    # TPG ship
+    initial_position = cfg.tpg_ship.initial_position
+    hull_num = cfg.tpg_ship.hull_num
+    storage_method = cfg.tpg_ship.storage_method
+    max_storage_wh = cfg.tpg_ship.max_storage_wh
+    generator_output_w = cfg.tpg_ship.generator_output_w
+    ship_return_speed_kt = cfg.tpg_ship.ship_return_speed_kt
+    ship_max_speed_kt = cfg.tpg_ship.ship_max_speed_kt
+    forecast_weight = cfg.tpg_ship.forecast_weight
+    typhoon_effective_range = cfg.tpg_ship.typhoon_effective_range
+    govia_base_judge_energy_storage_per = (
+        cfg.tpg_ship.govia_base_judge_energy_storage_per
+    )
+    judge_time_times = cfg.tpg_ship.judge_time_times
+    tpg_ship_1 = tpg_ship.TPG_ship(
+        initial_position,
+        hull_num,
+        storage_method,
+        max_storage_wh,
+        generator_output_w,
+        ship_return_speed_kt,
+        ship_max_speed_kt,
+        forecast_weight,
+        typhoon_effective_range,
+        govia_base_judge_energy_storage_per,
+        judge_time_times,
+    )
+
+    # Forecaster
+    forecast_time = cfg.forecaster.forecast_time
+    forecast_error_slope = cfg.forecaster.forecast_error_slope
+    typhoon_path_forecaster = forecaster.Forecaster(forecast_time, forecast_error_slope)
 
     # Storage base
     base_locate = cfg.storage_base.locate
     st_base_max_storage_wh = cfg.storage_base.max_storage_wh
-    st_base = storage_base.storage_BASE(base_locate, st_base_max_storage_wh)
+    st_base = storage_base.Storage_base(base_locate, st_base_max_storage_wh)
 
-    # TODO Support ship 1
-    # TODO Support ship 2
+    # Support ship 1
+    support_ship_1_supply_base_locate = cfg.support_ship_1.supply_base_locate
+    support_ship_1_max_storage_wh = cfg.support_ship_1.max_storage_wh
+    support_ship_1_max_speed_kt = cfg.support_ship_1.ship_speed_kt
+    support_ship_1 = support_ship.Support_ship(
+        support_ship_1_supply_base_locate,
+        support_ship_1_max_storage_wh,
+        support_ship_1_max_speed_kt,
+    )
+
+    # Support ship 2
+    support_ship_2_supply_base_locate = cfg.support_ship_2.supply_base_locate
+    support_ship_2_max_storage_wh = cfg.support_ship_2.max_storage_wh
+    support_ship_2_max_speed_kt = cfg.support_ship_2.ship_speed_kt
+    support_ship_2 = support_ship.Support_ship(
+        support_ship_2_supply_base_locate,
+        support_ship_2_max_storage_wh,
+        support_ship_2_max_speed_kt,
+    )
 
     simulator.simulate(
-        # TODO TPG ship
+        tpg_ship_1,  # TPG ship
+        typhoon_path_forecaster,  # Forecaster
         st_base,  # Storage base
-        # TODO Support ship 1
-        # TODO Support ship 2
+        support_ship_1,  # Support ship 1
+        support_ship_2,  # Support ship 2
         typhoon_data_path,
         output_folder_path + "/" + tpg_ship_log_file_name,
         output_folder_path + "/" + storage_base_log_file_name,
