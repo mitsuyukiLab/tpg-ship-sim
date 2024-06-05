@@ -52,46 +52,6 @@ def get_TY_start_time(year, typhoon_path_forecaster):
     return TY_occurrence_time
 
 
-# 蓄電量の状態量のタイプわけ
-def get_storage_state(storage_percentage):
-    """
-    ############################## def get_TY_start_time ##############################
-
-    [ 説明 ]
-
-    この関数は台風発電船の蓄電割合から対応する数値を返す関数です。
-
-    この数値はシミュレーションの可視化の際に使われる数値です。
-
-    ##############################################################################
-
-    引数 :
-        storage_percentage (float) : 台風発電船の蓄電割合
-
-    戻り値 :
-        20%以下→1 , 20%より多く80%より少ない→2 , 80%以上→3 , 100%以上→4
-
-    #############################################################################
-    """
-
-    # 蓄電量が20％以下
-    if storage_percentage <= 20:
-
-        return 1
-    # 蓄電量が100％以上
-    elif storage_percentage >= 100:
-
-        return 4
-    # 蓄電量が80％以上
-    elif storage_percentage >= 80:
-
-        return 3
-    # 蓄電量が20％より多く、80％より少ない
-    else:
-
-        return 2
-
-
 def cal_dwt(storage, storage_method):
     # 載貨重量トンを算出する。単位はt。
 
@@ -150,6 +110,7 @@ def simulate(
     UTC = timezone(timedelta(hours=+0), "UTC")
     datetime_1_1 = datetime(year, 1, 1, 0, 0, 0, tzinfo=tz.gettz("UTC"))
     current_time = int(datetime_1_1.timestamp())
+    month = datetime_1_1.month
     # 終了時刻
     datetime_12_31 = datetime(year, 12, 31, 18, 0, 0, tzinfo=tz.gettz("UTC"))
     unixtime_12_31 = int(datetime_12_31.timestamp())
@@ -171,6 +132,15 @@ def simulate(
     typhoon_data = pl.read_csv(typhoon_data_path)
     typhoon_path_forecaster.original_data = typhoon_data
 
+    # 風データ設定
+    wind_data = pl.read_csv(
+        "data/wind_datas/era5_testdata_E180W90S0W90_"
+        + str(int(year))
+        + "_"
+        + str(int(month))
+        + ".csv"
+    )
+
     # 発電船パラメータ設定
     tpg_ship_1.max_speed_power = cal_maxspeedpower(
         tpg_ship_1.max_speed,
@@ -178,12 +148,6 @@ def simulate(
         tpg_ship_1.storage_method,
         tpg_ship_1.hull_num,
     )  # 船体を最大船速で進めるための出力[W]
-    tpg_ship_1.generating_facilities_need_max_power = (
-        tpg_ship_1.generator_output * 0.01
-    )  # 発電付加物分抵抗[W] (今回は定格出力の1％が停止状態での抵抗)
-    tpg_ship_1.wind_propulsion_power = (
-        tpg_ship_1.max_speed_power * 0.1
-    )  # 風力推進機による推進力[W]
 
     tpg_ship_1.forecast_time = forecaster.Forecaster.forecast_time
 
@@ -206,205 +170,51 @@ def simulate(
 
     tpg_ship_1.set_initial_states()
 
-    # 外部初期値入力
-    storage_state_num = get_storage_state(tpg_ship_1.storage_percentage)
-
     #####################################  出力用の設定  ############################################
-    # 発電船の行動詳細
-    branch_condition_list = []
+    unix = []
+    date = []
 
-    # 台風の番号
-    target_typhoon_num = []  # そのときに追従している台風の番号（ない場合は0が入る）
+    ####################### TPG ship ##########################
+    tpg_ship_1.set_outputs()
 
-    # 目標地点
-    target_name_list = []
-    target_lat_list = []
-    target_lon_list = []
-    target_dis_list = []
+    ####################### Storage base ##########################
+    st_base.set_outputs()
 
-    # 台風座標
-    TY_lat_list = []
-    TY_lon_list = []
+    ####################### Support ship ##########################
+    support_ship_1.set_outputs()
 
-    # 発電船台風間距離
-    GS_TY_dis_list = []
-
-    # 発電船の座標
-    GS_lat_list = []
-    GS_lon_list = []
-
-    # 時刻関係
-    unix = []  # unixtime
-    date = []  # datetime
-
-    # 発電船の状態
-    GS_state_list = []  # 発電船の行動状態(描画用数値)
-    GS_speed_list = []
-
-    ############################# 発電指数 ###############################
-    GS_elect_storage_percentage = []  # 船内蓄電割合
-    GS_storage_state = []
-    gene_elect_time = []  # 発電時間
-    total_gene_elect = []  # 総発電量
-    loss_elect_time = []  # 電力消費時間（航行時間）
-    total_loss_elect = []  # 総消費電力
-    balance_gene_elect = []  # 発電収支（船内蓄電量）
-    per_timestep_gene_elect = []  # 時間幅あたりの発電量
-    per_timestep_loss_elect = []  # 時間幅あたりの消費電力
-    year_round_balance_gene_elect = []  # 通年発電収支
-
-    ####################### storageBASE ##########################
-    stbase_storage = []
-    stbase_st_per = []
-    stbase_condition = []
-
-    ####################### supportSHIP ##########################
-    sp_target_lat1 = []
-    sp_target_lon1 = []
-    sp_storage1 = []
-    sp_st_per1 = []
-    sp_ship_lat1 = []
-    sp_ship_lon1 = []
-    sp_brance_condition1 = []
-
-    sp_target_lat2 = []
-    sp_target_lon2 = []
-    sp_storage2 = []
-    sp_st_per2 = []
-    sp_ship_lat2 = []
-    sp_ship_lon2 = []
-    sp_brance_condition2 = []
+    support_ship_2.set_outputs()
 
     #######################################  出力用リストへ入力  ###########################################
-
-    branch_condition_list.append(tpg_ship_1.brance_condition)
     unix.append(current_time)
     date.append(datetime.fromtimestamp(unix[-1], UTC))
 
-    target_name_list.append(tpg_ship_1.target_name)
-    target_lat_list.append(tpg_ship_1.target_lat)
-    target_lon_list.append(tpg_ship_1.target_lon)
-    target_dis_list.append(tpg_ship_1.target_distance)
+    tpg_ship_1.outputs_append()
+    GS_data = tpg_ship_1.get_outputs(unix, date)
 
-    target_typhoon_num.append(tpg_ship_1.target_TY)
-    TY_lat_list.append(tpg_ship_1.next_TY_lat)
-    TY_lon_list.append(tpg_ship_1.next_TY_lon)
-    GS_TY_dis_list.append(tpg_ship_1.next_ship_TY_dis)
+    ####################### Storage base ##########################
+    st_base.outputs_append()
+    stBASE_data = st_base.get_outputs(unix, date)
 
-    GS_lat_list.append(tpg_ship_1.ship_lat)
-    GS_lon_list.append(tpg_ship_1.ship_lon)
-    GS_state_list.append(tpg_ship_1.ship_state)
-    GS_speed_list.append(tpg_ship_1.speed_kt)
+    ####################### Support ship ##########################
+    support_ship_1.outputs_append()
+    support_ship_2.outputs_append()
 
-    per_timestep_gene_elect.append(tpg_ship_1.gene_elect)  # 時間幅あたりの発電量[Wh]
-    gene_elect_time.append(tpg_ship_1.total_gene_time)  # 発電時間[hour]
-    total_gene_elect.append(tpg_ship_1.total_gene_elect)  # 総発電量[Wh]
-
-    per_timestep_loss_elect.append(tpg_ship_1.loss_elect)  # 時間幅あたりの消費電力[Wh]
-    loss_elect_time.append(tpg_ship_1.total_loss_time)  # 電力消費時間（航行時間）[hour]
-    total_loss_elect.append(tpg_ship_1.total_loss_elect)  # 総消費電力[Wh]
-
-    tpg_ship_1.storage_percentage = (tpg_ship_1.storage / tpg_ship_1.max_storage) * 100
-    tpg_ship_1.storage_state = get_storage_state(tpg_ship_1.storage_percentage)
-    GS_elect_storage_percentage.append(tpg_ship_1.storage_percentage)  # 船内蓄電割合[%]
-    GS_storage_state.append(tpg_ship_1.storage_state)
-
-    balance_gene_elect.append(tpg_ship_1.storage)  # 発電収支（船内蓄電量）[Wh]
-
-    year_round_balance_gene_elect.append(
-        tpg_ship_1.total_gene_elect - tpg_ship_1.total_loss_elect
-    )  # 通年発電収支
-
-    GS_data = pl.DataFrame(
-        {
-            "unixtime": unix,
-            "datetime": date,
-            "TARGET LOCATION": target_name_list,
-            "TARGET LAT": target_lat_list,
-            "TARGET LON": target_lon_list,
-            "TARGET DISTANCE[km]": target_dis_list,
-            "TARGET TYPHOON": target_typhoon_num,
-            "TARGET TY LAT": TY_lat_list,
-            "TARGET TY LON": TY_lon_list,
-            "TPGSHIP LAT": GS_lat_list,
-            "TPGSHIP LON": GS_lon_list,
-            "TPG_TY DISTANCE[km]": GS_TY_dis_list,
-            "BRANCH CONDITION": branch_condition_list,
-            "TPGSHIP STATUS": GS_state_list,
-            "SHIP SPEED[kt]": GS_speed_list,
-            "TIMESTEP POWER GENERATION[Wh]": per_timestep_gene_elect,
-            "TOTAL GENE TIME[h]": gene_elect_time,
-            "TOTAL POWER GENERATION[Wh]": total_gene_elect,
-            "TIMESTEP POWER CONSUMPTION[Wh]": per_timestep_loss_elect,
-            "TOTAL CONS TIME[h]": loss_elect_time,
-            "TOTAL POWER CONSUMPTION[Wh]": total_loss_elect,
-            "ONBOARD POWER STORAGE PER[%]": GS_elect_storage_percentage,
-            "ONBOARD POWER STORAGE STATUS": GS_storage_state,
-            "ONBOARD ENERGY STORAGE[Wh]": balance_gene_elect,
-            "YEARLY POWER GENERATION BALANCE": year_round_balance_gene_elect,
-        }
-    )
-
-    ####################### storageBASE ##########################
-    stbase_storage.append(st_base.storage)
-    stbase_st_per.append(st_base.storage / st_base.max_storage * 100)
-    stbase_condition.append(st_base.brance_condition)
-
-    stBASE_data = pl.DataFrame(
-        {
-            "unixtime": unix,
-            "datetime": date,
-            "STORAGE[Wh]": stbase_storage,
-            "STORAGE PER[%]": stbase_st_per,
-            "BRANCH CONDITION": stbase_condition,
-        }
-    )
-
-    ####################### supportSHIP ##########################
-    sp_target_lat1.append(support_ship_1.target_lat)
-    sp_target_lon1.append(support_ship_1.target_lon)
-    sp_storage1.append(support_ship_1.storage)
-    sp_st_per1.append(support_ship_1.storage / support_ship_1.max_storage * 100)
-    sp_ship_lat1.append(support_ship_1.ship_lat)
-    sp_ship_lon1.append(support_ship_1.ship_lon)
-    sp_brance_condition1.append(support_ship_1.brance_condition)
-
-    sp_target_lat2.append(support_ship_2.target_lat)
-    sp_target_lon2.append(support_ship_2.target_lon)
-    sp_storage2.append(support_ship_2.storage)
-    sp_st_per2.append(support_ship_2.storage / support_ship_2.max_storage * 100)
-    sp_ship_lat2.append(support_ship_2.ship_lat)
-    sp_ship_lon2.append(support_ship_2.ship_lon)
-    sp_brance_condition2.append(support_ship_2.brance_condition)
-
-    spSHIP1_data = pl.DataFrame(
-        {
-            "unixtime": unix,
-            "datetime": date,
-            "targetLAT": sp_target_lat1,
-            "targetLON": sp_target_lon1,
-            "LAT": sp_ship_lat1,
-            "LON": sp_ship_lon1,
-            "STORAGE[Wh]": sp_storage1,
-            "STORAGE PER[%]": sp_st_per1,
-            "BRANCH CONDITION": sp_brance_condition1,
-        }
-    )
-    spSHIP2_data = pl.DataFrame(
-        {
-            "unixtime": unix,
-            "datetime": date,
-            "targetLAT": sp_target_lat2,
-            "targetLON": sp_target_lon2,
-            "LAT": sp_ship_lat2,
-            "LON": sp_ship_lon2,
-            "STORAGE[Wh]": sp_storage2,
-            "STORAGE PER[%]": sp_st_per2,
-            "BRANCH CONDITION": sp_brance_condition2,
-        }
-    )
+    spSHIP1_data = support_ship_1.get_outputs(unix, date)
+    spSHIP2_data = support_ship_2.get_outputs(unix, date)
 
     for data_num in tqdm(range(record_count), desc="Simulating..."):
+
+        # 月毎の風データの取得
+        if month != datetime.fromtimestamp(current_time, UTC).month:
+            month = datetime.fromtimestamp(current_time, UTC).month
+            wind_data = pl.read_csv(
+                "data/wind_datas/era5_testdata_E180W90S0W90_"
+                + str(int(year))
+                + "_"
+                + str(int(month))
+                + ".csv"
+            )
 
         # 予報データ取得
         tpg_ship_1.forecast_data = typhoon_path_forecaster.create_forecast(
@@ -412,7 +222,7 @@ def simulate(
         )
 
         # timestep後の発電船の状態を取得
-        tpg_ship_1.get_next_ship_state(year, current_time, time_step)
+        tpg_ship_1.get_next_ship_state(year, current_time, time_step, wind_data)
 
         # timestep後の中継貯蔵拠点と運搬船の状態を取得
         st_base.operation_base(
@@ -423,143 +233,22 @@ def simulate(
         current_time = current_time + time_step_unix
 
         #######################################  出力用リストへ入力  ###########################################
-
-        branch_condition_list.append(tpg_ship_1.brance_condition)
         unix.append(current_time)
         date.append(datetime.fromtimestamp(unix[-1], UTC))
 
-        target_name_list.append(tpg_ship_1.target_name)
-        target_lat_list.append(tpg_ship_1.target_lat)
-        target_lon_list.append(tpg_ship_1.target_lon)
-        target_dis_list.append(tpg_ship_1.target_distance)
-
-        target_typhoon_num.append(tpg_ship_1.target_TY)
-        TY_lat_list.append(tpg_ship_1.next_TY_lat)
-        TY_lon_list.append(tpg_ship_1.next_TY_lon)
-        GS_TY_dis_list.append(tpg_ship_1.next_ship_TY_dis)
-
-        GS_lat_list.append(tpg_ship_1.ship_lat)
-        GS_lon_list.append(tpg_ship_1.ship_lon)
-        GS_state_list.append(tpg_ship_1.ship_state)
-        GS_speed_list.append(tpg_ship_1.speed_kt)
-
-        per_timestep_gene_elect.append(
-            tpg_ship_1.gene_elect
-        )  # 時間幅あたりの発電量[Wh]
-        gene_elect_time.append(tpg_ship_1.total_gene_time)  # 発電時間[hour]
-        total_gene_elect.append(tpg_ship_1.total_gene_elect)  # 総発電量[Wh]
-
-        per_timestep_loss_elect.append(
-            tpg_ship_1.loss_elect
-        )  # 時間幅あたりの消費電力[Wh]
-        loss_elect_time.append(
-            tpg_ship_1.total_loss_time
-        )  # 電力消費時間（航行時間）[hour]
-        total_loss_elect.append(tpg_ship_1.total_loss_elect)  # 総消費電力[Wh]
-
-        tpg_ship_1.storage_percentage = (
-            tpg_ship_1.storage / tpg_ship_1.max_storage
-        ) * 100
-        tpg_ship_1.storage_state = get_storage_state(tpg_ship_1.storage_percentage)
-        GS_elect_storage_percentage.append(
-            tpg_ship_1.storage_percentage
-        )  # 船内蓄電割合[%]
-        GS_storage_state.append(tpg_ship_1.storage_state)
-
-        balance_gene_elect.append(tpg_ship_1.storage)  # 発電収支（船内蓄電量）[Wh]
-
-        year_round_balance_gene_elect.append(
-            tpg_ship_1.total_gene_elect - tpg_ship_1.total_loss_elect
-        )  # 通年発電収支
-
-        GS_data = pl.DataFrame(
-            {
-                "unixtime": unix,
-                "datetime": date,
-                "TARGET LOCATION": target_name_list,
-                "TARGET LAT": target_lat_list,
-                "TARGET LON": target_lon_list,
-                "TARGET DISTANCE[km]": target_dis_list,
-                "TARGET TYPHOON": target_typhoon_num,
-                "TARGET TY LAT": TY_lat_list,
-                "TARGET TY LON": TY_lon_list,
-                "TPGSHIP LAT": GS_lat_list,
-                "TPGSHIP LON": GS_lon_list,
-                "TPG_TY DISTANCE[km]": GS_TY_dis_list,
-                "BRANCH CONDITION": branch_condition_list,
-                "TPGSHIP STATUS": GS_state_list,
-                "SHIP SPEED[kt]": GS_speed_list,
-                "TIMESTEP POWER GENERATION[Wh]": per_timestep_gene_elect,
-                "TOTAL GENE TIME[h]": gene_elect_time,
-                "TOTAL POWER GENERATION[Wh]": total_gene_elect,
-                "TIMESTEP POWER CONSUMPTION[Wh]": per_timestep_loss_elect,
-                "TOTAL CONS TIME[h]": loss_elect_time,
-                "TOTAL POWER CONSUMPTION[Wh]": total_loss_elect,
-                "ONBOARD POWER STORAGE PER[%]": GS_elect_storage_percentage,
-                "ONBOARD POWER STORAGE STATUS": GS_storage_state,
-                "ONBOARD ENERGY STORAGE[Wh]": balance_gene_elect,
-                "YEARLY POWER GENERATION BALANCE": year_round_balance_gene_elect,
-            }
-        )
+        tpg_ship_1.outputs_append()
+        GS_data = tpg_ship_1.get_outputs(unix, date)
 
         ####################### storageBASE ##########################
-        stbase_storage.append(st_base.storage)
-        stbase_st_per.append(st_base.storage / st_base.max_storage * 100)
-        stbase_condition.append(st_base.brance_condition)
-
-        stBASE_data = pl.DataFrame(
-            {
-                "unixtime": unix,
-                "datetime": date,
-                "STORAGE[Wh]": stbase_storage,
-                "STORAGE PER[%]": stbase_st_per,
-                "BRANCH CONDITION": stbase_condition,
-            }
-        )
+        st_base.outputs_append()
+        stBASE_data = st_base.get_outputs(unix, date)
 
         ####################### supportSHIP ##########################
-        sp_target_lat1.append(support_ship_1.target_lat)
-        sp_target_lon1.append(support_ship_1.target_lon)
-        sp_storage1.append(support_ship_1.storage)
-        sp_st_per1.append(support_ship_1.storage / support_ship_1.max_storage * 100)
-        sp_ship_lat1.append(support_ship_1.ship_lat)
-        sp_ship_lon1.append(support_ship_1.ship_lon)
-        sp_brance_condition1.append(support_ship_1.brance_condition)
+        support_ship_1.outputs_append()
+        support_ship_2.outputs_append()
 
-        sp_target_lat2.append(support_ship_2.target_lat)
-        sp_target_lon2.append(support_ship_2.target_lon)
-        sp_storage2.append(support_ship_2.storage)
-        sp_st_per2.append(support_ship_2.storage / support_ship_2.max_storage * 100)
-        sp_ship_lat2.append(support_ship_2.ship_lat)
-        sp_ship_lon2.append(support_ship_2.ship_lon)
-        sp_brance_condition2.append(support_ship_2.brance_condition)
-
-        spSHIP1_data = pl.DataFrame(
-            {
-                "unixtime": unix,
-                "datetime": date,
-                "targetLAT": sp_target_lat1,
-                "targetLON": sp_target_lon1,
-                "LAT": sp_ship_lat1,
-                "LON": sp_ship_lon1,
-                "STORAGE[Wh]": sp_storage1,
-                "STORAGE PER[%]": sp_st_per1,
-                "BRANCH CONDITION": sp_brance_condition1,
-            }
-        )
-        spSHIP2_data = pl.DataFrame(
-            {
-                "unixtime": unix,
-                "datetime": date,
-                "targetLAT": sp_target_lat2,
-                "targetLON": sp_target_lon2,
-                "LAT": sp_ship_lat2,
-                "LON": sp_ship_lon2,
-                "STORAGE[Wh]": sp_storage2,
-                "STORAGE PER[%]": sp_st_per2,
-                "BRANCH CONDITION": sp_brance_condition2,
-            }
-        )
+        spSHIP1_data = support_ship_1.get_outputs(unix, date)
+        spSHIP2_data = support_ship_2.get_outputs(unix, date)
 
     GS_data.write_csv(tpg_ship_log_file_path)
     stBASE_data.write_csv(storage_base_log_file_path)

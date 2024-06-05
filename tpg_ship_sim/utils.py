@@ -137,7 +137,30 @@ def draw_map(
     # グラフ保存用のフォルダがなければ作成
     os.makedirs(output_folder_path, exist_ok=True)
 
+    month = 0
+
     for j in tqdm(range(len(ship_typhoon_route_data)), desc="Drawing map"):
+
+        current_time = ship_typhoon_route_data[j, "unixtime"]
+        year = datetime.fromtimestamp(current_time, UTC).year
+
+        if month != datetime.fromtimestamp(current_time, UTC).month:
+            month = datetime.fromtimestamp(current_time, UTC).month
+            wind_data = pl.read_csv(
+                "data/wind_datas/era5_testdata_E180W90S0W90_"
+                + str(int(year))
+                + "_"
+                + str(int(month))
+                + ".csv",
+                encoding="shift-jis",
+            )
+            # LONとLATが偶数の時のみのデータを抽出
+            wind_data = wind_data.filter(wind_data["LON"] % 2 == 0)
+            wind_data = wind_data.filter(wind_data["LAT"] % 2 == 0)
+            wind_lon = wind_data[:]["LON"]  # 経度データ読み込み
+            wind_lat = wind_data[:]["LAT"]  # 緯度データ読み込み
+            wind_u = wind_data[:]["U10_E+_W-[m/s]"]
+            wind_v = wind_data[:]["V10_N+_S-[m/s]"]
 
         # 地図の作成
         fig = plt.figure(figsize=(12, 16))  # プロット領域の作成（matplotlib）
@@ -149,6 +172,22 @@ def draw_map(
         land_h = cfeature.NaturalEarthFeature("physical", "land", "50m")
         ax.add_feature(land_h, color="g")
         ax.set_extent([120, 180, 0, 70], ccrs.Geodetic())
+
+        for i in range(len(wind_lat)):
+            # 風矢印表示
+            size = 12
+            vec_size = np.sqrt((wind_u[i]) ** 2 + (wind_v[i]) ** 2)
+            Q_wind = ax.quiver(
+                wind_lon[i],
+                wind_lat[i],
+                wind_u[i] / vec_size * size,
+                wind_v[i] / vec_size * size,
+                vec_size,
+                cmap="YlOrRd",
+                clim=(0, 15),
+                width=0.003,
+                scale=400.0,
+            )
 
         # 中継貯蔵拠点&待機位置
         base_lat = 24
@@ -590,7 +629,7 @@ def draw_graph(
     UTC = timezone(timedelta(hours=+0), "UTC")
 
     # データの整理
-    totalgene = TPGship_data["YEARLY POWER GENERATION BALANCE"]
+    totalgene = TPGship_data["TOTAL POWER GENERATION[Wh]"]
     tg = []
     for i in range(len(totalgene)):
         tg.append(totalgene[i] / 10**9)

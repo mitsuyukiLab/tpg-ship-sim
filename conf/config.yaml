@@ -1,15 +1,29 @@
 env:
-  typhoon_data_path: "data/typhoon_data_2019_6_interval.csv"
-
+  typhoon_data_path: "data/typhoon_path/typhoon_data_2019_6_interval.csv"
+  
 tpg_ship:
   #TPG ship performance model
   initial_position: [24, 153] # lat, lon
   hull_num: 1
   storage_method: 2 # 1: 電気貯蔵, 2: MCH貯蔵
   max_storage_wh: 70000000000 # 台風発電船の蓄電容量[Wh]
+  electric_propulsion_max_storage_wh: 30000000000 # 電気推進機用の蓄電池容量[Wh]
+  elect_trust_efficiency: 0.83 # 電気推進機の効率
+  MCH_to_elect_efficiency: 0.5 # MCHから電気への変換効率
+  elect_to_MCH_efficiency: 0.8 # 電気からMCHへの変換効率
   generator_output_w: 138000000 # 発電機の台風下の定格出力[W]
+  generator_efficiency: 0.3 # 発電機の効率
+  generator_drag_coefficient: 0.3 # 発電機の発電時の抗力係数
+  generator_pillar_chord: 5 # 発電機支柱断面の流線型物体のコード長[m]
+  generator_pillar_max_tickness: 1 # 発電機支柱断面の流線型物体の最大厚さ[m]
+  generator_pillar_width: 30 # 発電機支柱の幅(船体から飛び出ている長さ)[m]
+  generator_num: 2 # 発電機の数
+  sail_num: 30 # 帆の数
+  sail_area: 880 # 帆の面積[m^2]
+  sail_steps: 5 # 帆の段数
   ship_return_speed_kt: 8 # 拠点帰港時の船速[kt]
   ship_max_speed_kt: 20 # 台風発電船の最大船速[kt]
+  ship_generate_speed_kt: 17.5 # 台風発電船の発電時の船速[kt]
   #TPG ship operational rule model
   forecast_weight: 30 # 台風の評価数値の計算用重み 「評価数値　＝　予想発電時間＊(forecast_weight) - 台風補足時間＊(100 - forecast_weight)」
   typhoon_effective_range: 100 # 台風発電船が台風で発電できる台風中心からの距離[km]

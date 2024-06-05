@@ -2,7 +2,9 @@ import math
 
 import numpy as np
 import polars as pl
+from geographiclib.geodesic import Geodesic
 from geopy.distance import geodesic
+from geopy.point import Point
 
 
 class TPG_ship:
@@ -24,9 +26,7 @@ class TPG_ship:
 
     属性 :
         max_storage (float) : 台風発電船の蓄電容量の上限値
-        generator_output (float) : 台風発電船の定格出力
-        wind_propulsion_power (float) : 通常海域で台風発電船の風力推進機で得られる平均出力
-        generating_facilities_need_max_power (float) : 停止状態の発電機を船体と最大船速で推進させるために必要な出力
+        generator_output_w (float) : 台風発電船の定格出力
         max_speed_power (float) : 付加物のない船体を最大船速で進めるのに必要な出力
 
 
@@ -60,7 +60,7 @@ class TPG_ship:
 
         distance_judge_hours (int) : 追従判断基準時間。発電船にとって台風が遠いか近いかを判断する基準。　※本プログラムでは使用しない
         judge_energy_storage_per (int) : 発電船が帰港判断をする蓄電割合。
-        effective_range (float) : 発電船が台風下での航行となる台風中心からの距離[km]
+        typhoon_effective_range (float) : 発電船が台風下での航行となる台風中心からの距離[km]
         govia_base_judge_energy_storage_per (int) : 発電船が拠点経由で目的地に向かう判断をする蓄電割合。
         judge_direction (float) : 発電船が2つの目的地の方位差から行動を判断する時の基準値[度]
         standby_via_base (int) : 待機位置へ拠点を経由して向かう場合のフラグ
@@ -82,8 +82,6 @@ class TPG_ship:
 
     ####################################  パラメータ  ######################################
 
-    wind_propulsion_power = 0
-    generating_facilities_need_max_power = 0
     max_speed_power = 0
 
     def __init__(
@@ -92,9 +90,23 @@ class TPG_ship:
         hull_num,
         storage_method,
         max_storage_wh,
+        electric_propulsion_max_storage_wh,
+        elect_trust_efficiency,
+        MCH_to_elect_efficiency,
+        elect_to_MCH_efficiency,
         generator_output_w,
+        generator_efficiency,
+        generator_drag_coefficient,
+        generator_pillar_chord,
+        generator_pillar_max_tickness,
+        generator_pillar_width,
+        generator_num,
+        sail_num,
+        sail_area,
+        sail_steps,
         ship_return_speed_kt,
         ship_max_speed_kt,
+        ship_generate_speed_kt,
         forecast_weight,
         typhoon_effective_range,
         govia_base_judge_energy_storage_per,
@@ -105,12 +117,27 @@ class TPG_ship:
         self.hull_num = hull_num
         self.storage_method = storage_method
         self.max_storage = max_storage_wh
-        self.generator_output = generator_output_w
+
+        self.electric_propulsion_max_storage_wh = electric_propulsion_max_storage_wh
+        self.elect_trust_efficiency = elect_trust_efficiency
+        self.MCH_to_elect_efficiency = MCH_to_elect_efficiency
+        self.elect_to_MCH_efficiency = elect_to_MCH_efficiency
+        self.generator_output_w = generator_output_w
+        self.generator_efficiency = generator_efficiency
+        self.generator_drag_coefficient = generator_drag_coefficient
+        self.generator_pillar_chord = generator_pillar_chord
+        self.generator_pillar_max_tickness = generator_pillar_max_tickness
+        self.generator_pillar_width = generator_pillar_width
+        self.generator_num = generator_num
+        self.sail_num = sail_num
+        self.sail_area = sail_area
+        self.sail_steps = sail_steps
         self.nomal_ave_speed = ship_return_speed_kt
         self.max_speed = ship_max_speed_kt
+        self.generating_speed_kt = ship_generate_speed_kt
 
         self.forecast_weight = forecast_weight
-        self.effective_range = typhoon_effective_range
+        self.typhoon_effective_range = typhoon_effective_range
         self.govia_base_judge_energy_storage_per = govia_base_judge_energy_storage_per
         self.judge_time_times = judge_time_times
 
@@ -130,9 +157,17 @@ class TPG_ship:
         ##############################################################################
 
         """
+        # 運航環境の状態量
+        self.air_density = 1.225  # kg/m^3
+        self.sea_density = 1025.0  # kg/m^3
+        self.kinematic_viscosity = 1.139 * 10**-6  # m^2/s
+        # 台風発電船の受ける風パラメータ
+        self.wind_u = 0
+        self.wind_v = 0
+        self.wind_state = str("no")
 
         # 船内電気関係の状態量
-        self.storage = self.max_storage * 0.1
+        self.storage = 0
         self.storage_percentage = (self.storage / self.max_storage) * 100
         self.supply_elect = 0
         self.gene_elect = 0
@@ -144,7 +179,12 @@ class TPG_ship:
         self.total_loss_time = 0
 
         # 発電船の行動に関する状態量(現状のクラス定義では外部入力不可(更新が内部関数のため))
+        self.hull_drag_work = 0
+        self.wind_trust_work = 0
+        self.generator_drag_work = 0
         self.speed_kt = 0
+        self.ship_lat_before = self.ship_lat
+        self.ship_lon_before = self.ship_lon
         self.target_name = "base station"
         self.target_lat = self.base_lat
         self.target_lon = self.base_lon
@@ -156,11 +196,228 @@ class TPG_ship:
         self.next_TY_lon = 0
         self.next_ship_TY_dis = np.nan
         self.brance_condition = "start forecast"
+        self.GS_gene_judge = 0
+        self.electric_propulsion_storage_wh = self.electric_propulsion_max_storage_wh
+        self.trust_power_storage_state = str("no action")  # 電気推進機の状態
+        self.wind_speed = 0
+        self.wind_direction = 0
 
         # 発電船自律判断システム設定
         self.judge_energy_storage_per = 100
         self.judge_direction = 10
         self.standby_via_base = 0
+
+        # 発電船発電時の状態量
+        self.generating_speed_mps = self.generating_speed_kt * 0.514444
+        self.generationg_wind_speed_mps = 25
+        self.generationg_wind_dirrection_deg = 80.0
+
+    def set_outputs(self):
+        """
+        ############################ def set_outputs ############################
+
+        [ 説明 ]
+
+        台風発電船の各種出力を記録するリストを作成する関数です。
+
+        ##############################################################################
+
+        """
+
+        # 発電船の行動詳細
+        self.branch_condition_list = []
+
+        # 台風の番号
+        self.target_typhoon_num_list = []
+
+        # 目標地点
+        self.target_name_list = []
+        self.target_lat_list = []
+        self.target_lon_list = []
+        self.target_dis_list = []
+
+        # 台風座標
+        self.TY_lat_list = []
+        self.TY_lon_list = []
+
+        # 発電船台風間距離
+        self.GS_TY_dis_list = []
+
+        # 発電船の座標
+        self.GS_lat_list = []
+        self.GS_lon_list = []
+
+        # 発電船の状態
+        self.GS_state_list = []  # 発電船の行動状態(描画用数値)
+        self.GS_speed_list = []
+        self.wind_speed_list = []
+        self.wind_direction_list = []
+
+        ############################# 発電指数 ###############################
+        self.GS_elect_storage_percentage_list = []  # 船内蓄電割合
+        self.GS_storage_state_list = []
+        self.gene_elect_time_list = []  # 発電時間
+        self.total_gene_elect_list = []  # 総発電量
+        self.loss_elect_time_list = []  # 電力消費時間（航行時間）
+        self.total_loss_elect_list = []  # 総消費電力
+        self.balance_gene_elect_list = []  # 発電収支（船内蓄電量）
+        self.per_timestep_gene_elect_list = []  # 時間幅あたりの発電量
+        self.per_timestep_loss_elect_list = []  # 時間幅あたりの消費電力
+        # self.year_round_balance_gene_elect_list = []  # 通年発電収支
+
+        # 発電状態チェック用
+        self.GS_gene_judge_list = []
+
+        # 船体抵抗チェック用
+        self.hull_drag_work_list = []
+
+        # 風状態チェック用
+        self.wind_trust_work_list = []
+        self.wind_u_list = []
+        self.wind_v_list = []
+        self.wind_state_list = []
+
+        # 電気推進用蓄電池チェック用
+        self.trust_power_storage_state_list = []
+        self.trust_power_storage_list = []
+
+        # 発電機抵抗チェック用
+        self.generator_drag_work_list = []
+
+    def outputs_append(self):
+        """
+        ############################ def outputs_append ############################
+
+        [ 説明 ]
+
+        set_outputs関数で作成したリストに出力を記録する関数です。
+
+        ##############################################################################
+
+        """
+        self.branch_condition_list.append(self.brance_condition)
+
+        self.target_name_list.append(self.target_name)
+        self.target_lat_list.append(float(self.target_lat))
+        self.target_lon_list.append(float(self.target_lon))
+        self.target_dis_list.append(float(self.target_distance))
+
+        self.target_typhoon_num_list.append(self.target_TY)
+        self.TY_lat_list.append(float(self.next_TY_lat))
+        self.TY_lon_list.append(float(self.next_TY_lon))
+        self.GS_TY_dis_list.append(float(self.next_ship_TY_dis))
+
+        self.GS_lat_list.append(float(self.ship_lat))
+        self.GS_lon_list.append(float(self.ship_lon))
+        self.GS_state_list.append(self.ship_state)
+        self.GS_speed_list.append(float(self.speed_kt))
+        self.wind_speed_list.append(float(self.wind_speed))
+        self.wind_direction_list.append(float(self.wind_direction))
+
+        self.per_timestep_gene_elect_list.append(
+            float(self.gene_elect)
+        )  # 時間幅あたりの発電量[Wh]
+        self.gene_elect_time_list.append(float(self.total_gene_time))  # 発電時間[hour]
+        self.total_gene_elect_list.append(float(self.total_gene_elect))  # 総発電量[Wh]
+
+        self.per_timestep_loss_elect_list.append(
+            float(self.loss_elect)
+        )  # 時間幅あたりの消費電力[Wh]
+        self.loss_elect_time_list.append(
+            float(self.total_loss_time)
+        )  # 電力消費時間（航行時間）[hour]
+        self.total_loss_elect_list.append(
+            float(self.total_loss_elect)
+        )  # 総消費電力[Wh]
+
+        storage_percentage = (self.storage / self.max_storage) * 100
+        # 蓄電量が20％以下
+        if storage_percentage <= 20:
+
+            storage_state = 1
+        # 蓄電量が100％以上
+        elif storage_percentage >= 100:
+
+            storage_state = 4
+        # 蓄電量が80％以上
+        elif storage_percentage >= 80:
+
+            storage_state = 3
+        # 蓄電量が20％より多く、80％より少ない
+        else:
+
+            storage_state = 2
+
+        self.GS_elect_storage_percentage_list.append(
+            float(storage_percentage)
+        )  # 船内蓄電割合[%]
+        self.GS_storage_state_list.append(int(storage_state))
+
+        self.balance_gene_elect_list.append(
+            float(self.storage)
+        )  # 発電収支（船内蓄電量）[Wh]
+
+        # self.year_round_balance_gene_elect_list.append(
+        #    float(self.total_gene_elect - self.total_loss_elect)
+        # )  # 通年発電収支
+
+        # 発電状態チェック用
+        self.GS_gene_judge_list.append(self.GS_gene_judge)
+
+        # 船体抵抗チェック用
+        self.hull_drag_work_list.append(float(self.hull_drag_work))
+
+        # 風状態チェック用
+        self.wind_trust_work_list.append(float(self.wind_trust_work))
+        self.wind_u_list.append(float(self.wind_u))
+        self.wind_v_list.append(float(self.wind_v))
+        self.wind_state_list.append(self.wind_state)
+
+        # 発電機抵抗チェック用
+        self.generator_drag_work_list.append(float(self.generator_drag_work))
+
+        # 電気推進用蓄電池チェック用
+        self.trust_power_storage_state_list.append(self.trust_power_storage_state)
+        self.trust_power_storage_list.append(float(self.electric_propulsion_storage_wh))
+
+    def get_outputs(self, unix_list, date_list):
+
+        data = pl.DataFrame(
+            {
+                "unixtime": unix_list,
+                "datetime": date_list,
+                "TARGET LOCATION": self.target_name_list,
+                "TARGET LAT": self.target_lat_list,
+                "TARGET LON": self.target_lon_list,
+                "TARGET DISTANCE[km]": self.target_dis_list,
+                "TARGET TYPHOON": self.target_typhoon_num_list,
+                "TARGET TY LAT": self.TY_lat_list,
+                "TARGET TY LON": self.TY_lon_list,
+                "TPGSHIP LAT": self.GS_lat_list,
+                "TPGSHIP LON": self.GS_lon_list,
+                "TPG_TY DISTANCE[km]": self.GS_TY_dis_list,
+                "BRANCH CONDITION": self.branch_condition_list,
+                "TPGSHIP STATUS": self.GS_state_list,
+                "SHIP SPEED[kt]": self.GS_speed_list,
+                "TIMESTEP POWER GENERATION[Wh]": self.per_timestep_gene_elect_list,
+                "TOTAL GENE TIME[h]": self.gene_elect_time_list,
+                "TOTAL POWER GENERATION[Wh]": self.total_gene_elect_list,
+                "TIMESTEP POWER CONSUMPTION[Wh]": self.per_timestep_loss_elect_list,
+                "TOTAL CONS TIME[h]": self.loss_elect_time_list,
+                "TOTAL POWER CONSUMPTION[Wh]": self.total_loss_elect_list,
+                "WIND TRUST WORK[Wh]": self.wind_trust_work_list,
+                "WIND U[m/s]": self.wind_u_list,
+                "WIND V[m/s]": self.wind_v_list,
+                "WIND STATE": self.wind_state_list,
+                "ONBOARD POWER STORAGE PER[%]": self.GS_elect_storage_percentage_list,
+                "ONBOARD POWER STORAGE STATUS": self.GS_storage_state_list,
+                "ONBOARD ENERGY STORAGE[Wh]": self.balance_gene_elect_list,
+                "ONBOARD ELECTRIC PROPULSION STORAGE[Wh] ": self.trust_power_storage_list,
+                "ONBOARD ELECTRIC PROPULSION STORAGE STATUS": self.trust_power_storage_state_list,
+            }
+        )
+
+        return data
 
     ####################################  メソッド  ######################################
 
@@ -168,8 +425,500 @@ class TPG_ship:
     # 状態量を更新するような関数はメソッドではない？
 
     # とりあえず状態量の計算をしている関数がわかるように　#状態量計算　をつけておく
+    def find_nearest_wind_point(self, wind_data):
+        """
+        ############################ def find_nearest_wind_point ############################
 
-    def calculate_power_consumption(self, time_step):
+        [ 説明 ]
+
+        その時刻における台風発電船の位置の風の状態を取得する関数です。
+
+        風速情報と台風発電船の移動軌跡に最も近い地点を見つける関数です。
+
+        ##############################################################################
+
+        引数 :
+            wind_data : ERA5の風速データ
+
+
+        戻り値 :
+            u (float) : x方向（経度方向東正）の風速[m/s]
+            v (float) : y方向（緯度方向北正）の風速[m/s]
+
+        #############################################################################
+        """
+
+        # 最も近い風速情報を取得
+        nearest_point = (
+            wind_data.with_columns(
+                (pl.lit(self.ship_lat) - pl.col("LAT")).abs().alias("lat_diff"),
+                (pl.lit(self.ship_lon) - pl.col("LON")).abs().alias("lon_diff"),
+            )
+            .with_columns((pl.col("lat_diff") + pl.col("lon_diff")).alias("total_diff"))
+            .sort("total_diff")
+            .head(1)
+        )
+
+        # 最も近い風速情報を取得
+        u = nearest_point["U10_E+_W-[m/s]"][0]
+        v = nearest_point["V10_N+_S-[m/s]"][0]
+
+        self.wind_u = u
+        self.wind_v = v
+
+        # print("wind座標",nearest_point["LAT"][0],nearest_point["LON"][0])
+        # print("現在地から1番近いポイント＝",nearest_point)
+
+        return u, v
+
+    #######################  硬翼帆の場合の風力推進機の出力計算  #######################
+
+    # 硬翼帆の揚力を推進力に利用する場合の計算用関数(26~167,193~333度の横風領域)(167~193度の向かい風)
+    def calculate_lift(self, wind_speed, lift_coefficient):
+        """
+        ############################ def calculate_lift ############################
+
+        [ 説明 ]
+
+        硬翼帆が風から得る揚力を計算する関数です。
+
+        ##############################################################################
+
+        引数 :
+            wind_speed (float) : 風速[m/s]
+            lift_coefficient (float) : 揚力係数
+
+        戻り値 :
+            lift (float) : 揚力[N]
+
+
+        #############################################################################
+        """
+
+        lift = (
+            0.5 * self.air_density * wind_speed**2 * self.sail_area * lift_coefficient
+        )
+
+        return lift
+
+    def calculate_drag(self, wind_speed, drag_coefficient):
+        """
+        ############################ def calculate_drag ############################
+
+        [ 説明 ]
+
+        硬翼帆が風から得る抗力を計算する関数です。
+
+        ##############################################################################
+
+        引数 :
+            wind_speed (float) : 風速[m/s]
+            drag_coefficient (float) : 抗力係数
+
+        戻り値 :
+            drag (float) : 抗力[N]
+
+
+        #############################################################################
+        """
+
+        drag = (
+            0.5 * self.air_density * wind_speed**2 * self.sail_area * drag_coefficient
+        )
+
+        return drag
+
+    def calculate_force(self, wind_direction, lift, drag):
+        """
+        ############################ def calculate_force ############################
+
+        [ 説明 ]
+
+        硬翼帆が風から得る推進力と横力を計算する関数です。
+
+        推進力は船の進行方向が正、横力は進行方向右向きが正とします。
+
+        ##############################################################################
+
+        引数 :
+            wind_direction (float) : 台風発電船の進行方向と風向の角度差[deg]
+            lift (float) : 揚力[N]
+            drag (float) : 抗力[N]
+
+        戻り値 :
+            force_trust (float) : 台風発電船が得る推進力[N]
+            force_side (float) : 台風発電船が得る横力[N]
+
+
+        #############################################################################
+        """
+        # 推力は船の進行方向が正、横力は進行方向右向きが正
+        force_angle = np.radians(wind_direction)
+        # force_side =  -lift * np.cos(force_angle) + drag * np.sin(force_angle)
+
+        if wind_direction <= 180:
+            force_trust = lift * np.sin(force_angle) + drag * np.cos(force_angle)
+        else:
+            # 硬翼帆は一回転させず進行方向に対して0から180度、0から-180度に動かすため推力は鏡写しで計算する必要がある
+            force_angle = np.radians(360 - wind_direction)
+            force_trust = lift * np.sin(force_angle) + drag * np.cos(force_angle)
+
+        return force_trust  # , force_side
+
+    # 硬翼帆の抗力を推進力に利用する場合の計算用関数(0~26,333~360度の追い風領域)
+    def calculate_plate_drag(self, wind_direction, drag):
+        """
+        ############################ def calculate_plate_drag ############################
+
+        [ 説明 ]
+
+        硬翼帆が追い風から得る抗力による推進力と横力を計算する関数です。
+
+        推進力は船の進行方向が正、横力は進行方向右向きが正とします。
+
+        ##############################################################################
+
+        引数 :
+            wind_direction (float) : 台風発電船の進行方向と風向の角度差[deg]
+            drag (float) : 抗力[N]
+
+        戻り値 :
+            force_trust (float) : 台風発電船が得る推進力[N]
+            force_side (float) : 台風発電船が得る横力[N]
+
+
+        #############################################################################
+        """
+        force = drag
+        force_trust = force * np.cos(np.radians(wind_direction))
+        # force_side = force * np.sin(np.radians(wind_direction))
+        return force_trust  # , force_side
+
+    # 風向360度対応仕事量計算用関数
+    def calculate_work(self, wind_direction, time_interval):
+        """
+        ############################ def calculate_plate_drag ############################
+
+        [ 説明 ]
+
+        硬翼帆によって台風発電船が得られる仕事量の計算用関数です。
+
+        ##############################################################################
+
+        引数 :
+            wind_direction (float) : 台風発電船の進行方向と風向の角度差[deg]
+            time_interval (int) : エネルギー計算における時間の進み幅[hours]
+
+        戻り値 :
+            wind_work (float) : time_intervalあたりに風から得られる仕事量[Wh]
+
+
+        #############################################################################
+        """
+        # 船速の単位をktからm/sに変換
+        ship_speed_mps = self.speed_kt * 0.514444  # 船の速度 [m/s]
+        # 風速の計算
+        wind_speed = math.sqrt(self.wind_u**2 + self.wind_v**2)
+
+        if self.GS_gene_judge == 1:  # 台風下にいる場合
+            ship_speed_mps = self.generating_speed_mps
+            wind_speed = self.generationg_wind_speed_mps
+            wind_direction = self.generationg_wind_dirrection_deg
+
+        # 記録
+        self.wind_speed = wind_speed
+        self.wind_direction = wind_direction
+
+        lift = 0
+        drag = 0
+
+        # 風向きによって計算方法を分岐
+        # 横風
+        if 26 <= wind_direction <= 167 or 193 <= wind_direction <= 333:
+            self.wind_state = str("Cross wind")
+            # 迎角20度時の係数を使用
+            lift_coefficient = 1.8
+            drag_coefficient = 0.4
+            lift = self.calculate_lift(wind_speed, lift_coefficient)
+            drag = self.calculate_drag(wind_speed, drag_coefficient)
+            force_trust = self.calculate_force(wind_direction, lift, drag)
+
+        # 追い風
+        elif 0 <= wind_direction <= 26 or 333 <= wind_direction <= 360:
+            self.wind_state = str("Tail wind")
+            # 迎角90度時の係数を使用
+            drag_coefficient = 1.3
+            drag = self.calculate_drag(wind_speed, drag_coefficient)
+            lift = 0
+            force_trust = self.calculate_plate_drag(wind_direction, drag)
+
+        # 向かい風
+        else:
+            self.wind_state = str("Head wind")
+            # 迎角0度時の係数を使用
+            lift_coefficient = 0.5  # 揚力係数
+            drag_coefficient = 0.1  # 抗力係数
+            lift = self.calculate_lift(wind_speed, lift_coefficient) / self.sail_steps
+            drag = self.calculate_drag(wind_speed, drag_coefficient) / self.sail_steps
+            force_trust = self.calculate_force(wind_direction, lift, drag)
+
+        # 今回は横力(force_side)を無視して推進力のみを計算
+
+        # 仕事量の計算[Wh]
+        wind_work = force_trust * ship_speed_mps * time_interval * self.sail_num
+
+        # self.ship_speed_sub_list.append(ship_speed_mps)
+        # self.wind_speed_sub_list.append(wind_speed)
+        # self.wind_direction_sub_list.append(wind_direction)
+        # self.wind_state_sub_list.append(self.wind_state)
+        # self.wind_work_list.append(wind_work)
+        # self.wind_trust_list.append(force_trust)
+        # self.sail_lift_list.append(lift*self.sail_num)
+        # self.sail_drag_list.append(drag*self.sail_num)
+
+        return wind_work
+
+    def calculate_initial_bearing(self):
+        """
+        ############################ def calculate_initial_bearing ############################
+
+        [ 説明 ]
+
+        台風発電船の航路である大圏航路上の移動を再現するための方位角の取得関数です。
+
+        取得した方位角を用いて始点から終点間のtime_interval毎の座標を取得します。
+
+        ##############################################################################
+
+        引数 :
+
+
+        戻り値 :
+            initial_bearing (float) : 台風発電船の進行方向の初期方位角[deg]
+
+
+        #############################################################################
+        """
+
+        # 始点と終点の緯度と経度
+        start_coord = (self.ship_lat_before, self.ship_lon_before)
+        end_coord = (self.ship_lat, self.ship_lon)
+
+        # Geodesicクラスのインスタンスを作成
+        geod = Geodesic.WGS84
+
+        # 始点と終点の緯度と経度
+        lat1, lon1 = start_coord[0], start_coord[1]
+        lat2, lon2 = end_coord[0], end_coord[1]
+
+        # geod.Inverse()を使用して始点から終点までの地理的な情報を取得
+        # 結果として辞書が返され、辞書のキー 'azi1' は初期方位角を含む
+        result = geod.Inverse(lat1, lon1, lat2, lon2)
+
+        # 初期方位角を取得（北を0度とし、時計回りに測定）
+        initial_bearing = result["azi1"]
+
+        return initial_bearing
+
+    def calculate_trajectory_energy(self, wind_data, timestep):
+        """
+        ############################ def calculate_trajectory_energy ############################
+
+        [ 説明 ]
+
+        台風発電船の移動軌跡と風速情報から風力推進機（硬翼帆）で得られるエネルギーを計算する関数です。
+
+        ##############################################################################
+
+        引数 :
+            wind_data : ERA5の風速データ
+            timestep (int) : シミュレーションにおける時間の進み幅[hours]
+
+
+        戻り値 :
+            total_wind_work (float) : time_stepで風から風力推進機が得られる仕事量[Wh]
+
+        #############################################################################
+        """
+
+        # 初期方位角を計算
+        initial_bearing = self.calculate_initial_bearing()
+
+        # 始点と終点の緯度と経度
+        start_coord = (self.ship_lat_before, self.ship_lon_before)
+        end_coord = (self.ship_lat, self.ship_lon)
+
+        # 移動しない場合の計算を省く場合の分岐
+        # if start_coord == end_coord:
+        #    return 0
+
+        # else:
+
+        # 始点と終点を Point オブジェクトに変換
+        start_point = Point(start_coord)
+        end_point = Point(end_coord)
+
+        # 大圏距離を計算
+        geo_dist = geodesic(start_point, end_point)
+        total_distance = geo_dist.kilometers
+
+        # 時間間隔の設定
+        time_interval = timestep / (2 * timestep)
+
+        # 初期化
+        current_position = start_point
+        current_bearing = initial_bearing
+        total_wind_work = 0
+
+        # 時間間隔ごとの移動
+        roop_num = 2 * timestep
+
+        for i in range(roop_num):
+
+            # 現在の時刻
+            time = i * time_interval
+
+            # 指定された時間での移動距離を計算
+            distance_travelled = (total_distance / timestep) * time
+
+            # 現在の位置を計算
+            current_position = geodesic(kilometers=distance_travelled).destination(
+                point=start_point, bearing=current_bearing
+            )
+
+            # 現在の方位角を更新
+            current_bearing = self.calculate_initial_bearing()
+
+            # 現在の位置の緯度経度
+            current_lat, current_lon = (
+                current_position.latitude,
+                current_position.longitude,
+            )
+
+            # 風速データを取得
+            # ここでは風速データを取得するための関数 find_nearest_wind_point を使用します。
+            # この関数は data から緯度経度に最も近い風速データを取得するものです。
+            u, v = self.find_nearest_wind_point(wind_data)
+
+            # 風向角度を計算（北を 0 度として時計回りに増加）
+            wind_angle = math.degrees(math.atan2(v, u))
+            # 北を 0 度として時計回りに測定するように調整
+            wind_angle = (360 - wind_angle + 90) % 360
+
+            # 船の方位角と風向の角度差を計算
+            if current_bearing < 0:
+                current_bearing += 360
+
+            # 船の方位から見て風がどの方向に向かって吹いているのかを計算している。（必要に応じて吹いて来ている方向に直す）
+            wind_direction = (wind_angle - current_bearing + 360) % 360
+
+            # エネルギーを計算
+            wind_work = self.calculate_work(wind_direction, time_interval)
+
+            # エネルギーを累積
+            total_wind_work += wind_work
+
+            # print("ship座標",current_lat,current_lon)
+            # print("風速",u,v)
+            # print("進路",current_bearing)
+            # print("風向",wind_angle)
+            # print("角度差",angle_difference)
+            # print("エネルギー",energy)
+
+        return total_wind_work
+
+    #######################################################################################
+
+    ###########################  発電機に関する設定  #####################################
+    def calculate_generator_drag_work(self):
+        """
+        ############################ def calculate_generater_drag_work ############################
+
+        [ 説明 ]
+
+        台風発電船の発電機(実際は発電プロペラ後方の流線型物体）による非台風下における抵抗の仕事量を計算する関数です。
+
+        停止状態のプロペラの抵抗を計算するのが面倒だったため、発電プロペラ後方の流線型物体の抵抗を計算する関数を作成しました。
+
+        そのため、流線型物体の船体から飛び出ている長さwはプロペラの直径より大きいものとして考えています。
+
+        ##############################################################################
+
+        引数 (今回はselfで定義しているので注意):
+            ship_speed_kt (float) : 船速（kt）
+            c (float) : 発電機（発電プロペラ後方の流線型物体）のコード長（m）
+            t (float) : 発電機（発電プロペラ後方の流線型物体）の最大厚さ（m）
+            w (float) : 発電機（発電プロペラ後方の流線型物体）の幅方向の長さ（m）
+
+        戻り値 :
+            Da (float) : 発電機（発電プロペラ後方の流線型物体）の抵抗力による仕事量（W）
+
+        #############################################################################
+
+        """
+        # 海水の密度と動粘度
+        rho = self.sea_density  # kg/m^3
+        nu = self.kinematic_viscosity  # m^2/s
+
+        # 船速（物体周りの流速）のm/sへの変換
+        ship_speed_mps = self.speed_kt * 0.514444
+
+        if ship_speed_mps != 0:
+            # 発電プロペラ後方の流線型物体のレイノルズ数
+            re = ship_speed_mps * self.generator_pillar_chord / nu
+
+            # 平板の摩擦抵抗係数をプラントル・シュリヒティングの公式から計算
+            cf = 0.455 / (math.log10(re) ** 2.58)
+
+            # 発電プロペラ後方にある2次元柱体の流線型物体（以下、支柱）の粘性抵抗係数をヘルナーの実験式から計算
+            cd = (
+                2
+                * (
+                    self.generator_pillar_chord / self.generator_pillar_max_tickness
+                    + 2
+                    + 60
+                    + (self.generator_pillar_max_tickness / self.generator_pillar_chord)
+                    ** 3
+                )
+                * cf
+            )
+
+            # 単位幅あたりの抵抗力
+            d = 0.5 * cd * rho * ship_speed_mps**2 * self.generator_pillar_max_tickness
+
+            # 発電機の支柱の抵抗力
+            da = d * self.generator_pillar_width
+
+            # 発電機1つの支柱の抵抗力による仕事量（W）
+            da = da * ship_speed_mps
+        else:
+            da = 0
+
+        if self.GS_gene_judge == 1:
+            # 発電機のタービン回転面積
+            s_pg = self.generator_output_w / (
+                self.generator_num
+                * 0.5
+                * rho
+                * self.generating_speed_mps**3
+                * self.generator_efficiency
+            )
+            # 発電機のタービン1機あたりの抵抗
+            da = (
+                0.5
+                * rho
+                * self.generating_speed_mps**2
+                * s_pg
+                * self.generator_drag_coefficient
+            )
+            # 発電機のタービン1機あたりの抵抗力による仕事量（W）
+            da = da * self.generating_speed_mps
+
+        return da
+
+    #######################################################################################
+
+    def calculate_power_consumption(self, wind_data, time_step):
         """
         ############################ def calculate_power_consumption ############################
 
@@ -189,16 +938,38 @@ class TPG_ship:
         #############################################################################
         """
 
+        self.wind_trust_work = self.calculate_trajectory_energy(
+            wind_data, time_step
+        )  # [Wh]
+        self.generator_drag_work = (
+            self.generator_num * self.calculate_generator_drag_work() * time_step
+        )  # [Wh]
+
+        # 船体抵抗による仕事量
+        if self.GS_gene_judge == 1:
+            self.speed_kt = self.generating_speed_kt
+            self.hull_drag_work = (
+                (self.max_speed_power)
+                * ((self.generating_speed_kt / self.max_speed) ** 3)
+                * time_step
+            )
+        else:
+            self.hull_drag_work = (
+                (self.max_speed_power)
+                * ((self.speed_kt / self.max_speed) ** 3)
+                * time_step
+            )
+
         # 台風追従に必要な出力
         typhoon_tracking_power = (
-            self.max_speed_power + self.generating_facilities_need_max_power
-        ) * ((self.speed_kt / self.max_speed) ** 3) - self.wind_propulsion_power
+            self.hull_drag_work + self.generator_drag_work - self.wind_trust_work
+        )
 
         if typhoon_tracking_power < 0:
             typhoon_tracking_power = 0
 
-        # 電気から動力への変換は損失なしで行える仮定
-        energy_loss = typhoon_tracking_power * time_step
+        # 電気から動力への変換効率を考慮
+        energy_loss = typhoon_tracking_power / self.elect_trust_efficiency
 
         return energy_loss
 
@@ -758,6 +1529,11 @@ class TPG_ship:
             next_lon = g_lon
 
         next_position = (next_lat, next_lon)
+
+        # 移動前の座標の記録（消費電力計算に使用）
+        self.ship_lat_before = self.ship_lat
+        self.ship_lon_before = self.ship_lon
+
         self.ship_lat = next_lat
         self.ship_lon = next_lon
 
@@ -925,7 +1701,7 @@ class TPG_ship:
 
         if self.target_TY_data[0, "TY_CATCH_TIME"] <= time_step:
             self.brance_condition = "arrived at typhoon"
-            self.speed_kt = self.max_speed
+            self.speed_kt = self.generating_speed_kt
 
             self.GS_gene_judge = 1
 
@@ -995,7 +1771,7 @@ class TPG_ship:
     # 状態量計算
     # 行動判定も入っているので機能の要素も入っている？
     # 全てのパラメータを次の時刻のものに変える処理
-    def get_next_ship_state(self, year, current_time, time_step):
+    def get_next_ship_state(self, year, current_time, time_step, wind_data):
         """
         ############################ def get_next_ship_state ############################
 
@@ -1031,6 +1807,7 @@ class TPG_ship:
         """
 
         self.distance_check = 0
+        self.trust_power_storage_state = str("no action")
 
         # 蓄電量X％以上の場合
         if (
@@ -1066,7 +1843,7 @@ class TPG_ship:
 
                 self.next_TY_lat = 0
                 self.next_TY_lon = 0
-                self.next_ship_TY_dis = " "
+                self.next_ship_TY_dis = np.nan
 
             elif (
                 self.storage_percentage >= self.govia_base_judge_energy_storage_per
@@ -1080,7 +1857,7 @@ class TPG_ship:
 
                     self.next_TY_lat = 0
                     self.next_TY_lon = 0
-                    self.next_ship_TY_dis = " "
+                    self.next_ship_TY_dis = np.nan
 
                 elif self.TY_and_base_action == 1:
 
@@ -1111,7 +1888,7 @@ class TPG_ship:
                         # 追従対象の台風がないことにする
                         self.next_TY_lat = 0
                         self.next_TY_lon = 0
-                        self.next_ship_TY_dis = " "
+                        self.next_ship_TY_dis = np.nan
 
                     if (
                         target_TY_lat != comparison_lat
@@ -1127,7 +1904,7 @@ class TPG_ship:
 
             self.next_TY_lat = 0
             self.next_TY_lon = 0
-            self.next_ship_TY_dis = " "
+            self.next_ship_TY_dis = np.nan
 
             self.speed_kt = self.max_speed
             # 追従対象の台風が存在するか判別
@@ -1210,7 +1987,7 @@ class TPG_ship:
 
             if (
                 len(next_time_TY_data) != 0
-                and self.next_ship_TY_dis <= self.effective_range
+                and self.next_ship_TY_dis <= self.typhoon_effective_range
             ):
                 self.brance_condition = "within 50km of a typhoon following"
 
@@ -1233,13 +2010,77 @@ class TPG_ship:
 
         # 現在この関数での出力は次の時刻での　船の状態　追従目標　船速　座標　単位時間消費電力・発電量　保有電力　保有電力割合　目標地点との距離　となっている
 
-        # その時刻〜次の時刻での消費電力計算
-        self.loss_elect = (
-            self.calculate_power_consumption(time_step) * self.GS_loss_judge
+        # その時刻〜次の時刻での消費仕事量計算
+        self.loss_work = (
+            self.calculate_power_consumption(wind_data, time_step) * self.GS_loss_judge
         )
 
         # その時刻〜次の時刻での発電量計算
-        self.gene_elect = self.generator_output * time_step * self.GS_gene_judge
+        self.gene_elect = self.generator_output_w * time_step * self.GS_gene_judge
+
+        # 電気推進機用の電力供給・消費
+        if self.GS_loss_judge == 1:  # 消費している場合
+            if (
+                self.electric_propulsion_storage_wh
+                - self.loss_work / self.elect_trust_efficiency
+            ) >= 0:  # 電気推進用の電力で事足りる場合
+                self.electric_propulsion_storage_wh = (
+                    self.electric_propulsion_storage_wh
+                    - self.loss_work / self.elect_trust_efficiency
+                )
+                self.loss_elect = self.loss_work / self.elect_trust_efficiency
+                self.trust_power_storage_state = str("use only power storage for trust")
+            else:  # 電気推進用の電力で事足りない場合
+                loss_elect_trust = (
+                    self.loss_work / self.elect_trust_efficiency
+                    - self.electric_propulsion_storage_wh
+                )
+                self.electric_propulsion_storage_wh = 0
+                self.storage = (
+                    self.storage - loss_elect_trust / self.MCH_to_elect_efficiency
+                )  # 不足分をMCHから水素を作り発電する
+                self.loss_elect = (
+                    self.electric_propulsion_storage_wh
+                    + loss_elect_trust / self.MCH_to_elect_efficiency
+                )
+                loss_elect_trust = 0  # 念のため初期化
+                self.trust_power_storage_state = str(
+                    "use power from trust's and MCH's storage"
+                )
+
+        elif self.GS_gene_judge == 1:  # 発電している場合
+            self.loss_elect = self.loss_work
+            if self.gene_elect < (
+                self.electric_propulsion_max_storage_wh
+                - self.electric_propulsion_storage_wh
+            ):  # 電気推進用の電力を使用しており消費量が発電量を上回る場合
+                self.electric_propulsion_storage_wh = (
+                    self.electric_propulsion_storage_wh + self.gene_elect
+                )
+                self.gene_elect = 0
+                self.trust_power_storage_state = str("charge power storage for trust")
+            elif (
+                self.electric_propulsion_storage_wh
+                < self.electric_propulsion_max_storage_wh
+            ):  # 電気推進用の電力を使用しており消費量が発電量を下回る場合
+                self.gene_elect = (
+                    self.gene_elect
+                    - (
+                        self.electric_propulsion_max_storage_wh
+                        - self.electric_propulsion_storage_wh
+                    )
+                ) * self.elect_to_MCH_efficiency
+                self.electric_propulsion_storage_wh = (
+                    self.electric_propulsion_max_storage_wh
+                )
+                self.trust_power_storage_state = str(
+                    "charge power storage for trust (full)"
+                )
+            else:  # 電気推進用の電力を使用しておらず、発電量をそのまま蓄える場合
+                self.gene_elect = self.gene_elect * self.elect_to_MCH_efficiency
+                self.trust_power_storage_state = str("no charge")
+        else:  # 何もしていない場合
+            self.loss_elect = self.loss_work
 
         self.total_gene_elect = self.total_gene_elect + self.gene_elect
         self.total_loss_elect = self.total_loss_elect + self.loss_elect
@@ -1248,7 +2089,7 @@ class TPG_ship:
         self.total_loss_time = self.total_loss_time + time_step * self.GS_loss_judge
 
         # 次の時刻での発電船保有電力
-        self.storage = self.storage + self.gene_elect - self.loss_elect
+        self.storage = self.storage + self.gene_elect
 
         self.storage_percentage = self.storage / self.max_storage * 100
 

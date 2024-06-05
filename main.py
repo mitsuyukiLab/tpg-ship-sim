@@ -30,9 +30,23 @@ def main(cfg: DictConfig) -> None:
     hull_num = cfg.tpg_ship.hull_num
     storage_method = cfg.tpg_ship.storage_method
     max_storage_wh = cfg.tpg_ship.max_storage_wh
+    electric_propulsion_max_storage_wh = cfg.tpg_ship.electric_propulsion_max_storage_wh
+    elect_trust_efficiency = cfg.tpg_ship.elect_trust_efficiency
+    MCH_to_elect_efficiency = cfg.tpg_ship.MCH_to_elect_efficiency
+    elect_to_MCH_efficiency = cfg.tpg_ship.elect_to_MCH_efficiency
     generator_output_w = cfg.tpg_ship.generator_output_w
+    generator_efficiency = cfg.tpg_ship.generator_efficiency
+    generator_drag_coefficient = cfg.tpg_ship.generator_drag_coefficient
+    generator_pillar_chord = cfg.tpg_ship.generator_pillar_chord
+    generator_pillar_max_tickness = cfg.tpg_ship.generator_pillar_max_tickness
+    generator_pillar_width = cfg.tpg_ship.generator_pillar_width
+    generator_num = cfg.tpg_ship.generator_num
+    sail_num = cfg.tpg_ship.sail_num
+    sail_area = cfg.tpg_ship.sail_area
+    sail_steps = cfg.tpg_ship.sail_steps
     ship_return_speed_kt = cfg.tpg_ship.ship_return_speed_kt
     ship_max_speed_kt = cfg.tpg_ship.ship_max_speed_kt
+    ship_generate_speed_kt = cfg.tpg_ship.ship_generate_speed_kt
     forecast_weight = cfg.tpg_ship.forecast_weight
     typhoon_effective_range = cfg.tpg_ship.typhoon_effective_range
     govia_base_judge_energy_storage_per = (
@@ -44,9 +58,23 @@ def main(cfg: DictConfig) -> None:
         hull_num,
         storage_method,
         max_storage_wh,
+        electric_propulsion_max_storage_wh,
+        elect_trust_efficiency,
+        MCH_to_elect_efficiency,
+        elect_to_MCH_efficiency,
         generator_output_w,
+        generator_efficiency,
+        generator_drag_coefficient,
+        generator_pillar_chord,
+        generator_pillar_max_tickness,
+        generator_pillar_width,
+        generator_num,
+        sail_num,
+        sail_area,
+        sail_steps,
         ship_return_speed_kt,
         ship_max_speed_kt,
+        ship_generate_speed_kt,
         forecast_weight,
         typhoon_effective_range,
         govia_base_judge_energy_storage_per,

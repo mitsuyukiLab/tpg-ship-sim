@@ -1,4 +1,5 @@
 import numpy as np
+import polars as pl
 from geopy.distance import geodesic
 
 
@@ -55,6 +56,63 @@ class Support_ship:
         self.ship_lon = supply_base_locate[1]
         self.max_storage = max_storage_wh
         self.support_ship_speed = max_speed_kt
+
+    def set_outputs(self):
+        """
+        ############################ def set_outputs ############################
+
+        [ 説明 ]
+
+        補助船の出力を記録するリストを作成する関数です。
+
+        ##############################################################################
+
+        """
+
+        self.sp_target_lat_list = []
+        self.sp_target_lon_list = []
+        self.sp_storage_list = []
+        self.sp_st_per_list = []
+        self.sp_ship_lat_list = []
+        self.sp_ship_lon_list = []
+        self.sp_brance_condition_list = []
+
+    def outputs_append(self):
+        """
+        ############################ def outputs_append ############################
+
+        [ 説明 ]
+
+        set_outputs関数で作成したリストに出力を記録する関数です。
+
+        ##############################################################################
+
+        """
+
+        self.sp_target_lat_list.append(float(self.target_lat))
+        self.sp_target_lon_list.append(float(self.target_lon))
+        self.sp_storage_list.append(float(self.storage))
+        self.sp_st_per_list.append(float(self.storage / self.max_storage * 100))
+        self.sp_ship_lat_list.append(float(self.ship_lat))
+        self.sp_ship_lon_list.append(float(self.ship_lon))
+        self.sp_brance_condition_list.append(self.brance_condition)
+
+    def get_outputs(self, unix_list, date_list):
+        data = pl.DataFrame(
+            {
+                "unixtime": unix_list,
+                "datetime": date_list,
+                "targetLAT": self.sp_target_lat_list,
+                "targetLON": self.sp_target_lon_list,
+                "LAT": self.sp_ship_lat_list,
+                "LON": self.sp_ship_lon_list,
+                "STORAGE[Wh]": self.sp_storage_list,
+                "STORAGE PER[%]": self.sp_st_per_list,
+                "BRANCH CONDITION": self.sp_brance_condition_list,
+            }
+        )
+
+        return data
 
     # 状態量計算
     def get_distance(self, storage_base_position):

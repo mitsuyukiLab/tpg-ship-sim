@@ -1,3 +1,6 @@
+import polars as pl
+
+
 class Storage_base:
     """
     ############################### class storage_base ###############################
@@ -39,15 +42,69 @@ class Storage_base:
     call_ship2 = 0
     call_per = 60
     brance_condition = "while in storage"
-
-    # 南鳥島
-    # lat = 24
-    # lon = 153
-    # locate = (lat, lon)
+    MCH_discharged_cargo_quantity = 0
 
     def __init__(self, locate, max_storage) -> None:
         self.locate = locate
         self.max_storage = max_storage
+
+    def set_outputs(self):
+        """
+        ############################ def set_outputs ############################
+
+        [ 説明 ]
+
+        中継貯蔵拠点の出力を記録するリストを作成する関数です。
+
+        ##############################################################################
+
+        """
+        self.stbase_storage_list = []
+        self.stbase_MCH_discharged_cargo_quantity_list = []
+        self.stbase_st_per_list = []
+        self.stbase_condition_list = []
+
+    def outputs_append(self):
+        """
+        ############################ def outputs_append ############################
+
+        [ 説明 ]
+
+        set_outputs関数で作成したリストに出力を記録する関数です。
+
+        ##############################################################################
+
+        """
+        self.stbase_storage_list.append(float(self.storage))
+        self.stbase_MCH_discharged_cargo_quantity_list.append(
+            float(self.MCH_discharged_cargo_quantity)
+        )
+        self.stbase_st_per_list.append(float(self.storage / self.max_storage * 100))
+        self.stbase_condition_list.append(self.brance_condition)
+
+    def get_outputs(self, unix, date):
+        """
+        ############################ def get_outputs ############################
+
+        [ 説明 ]
+
+        set_outputs関数で作成したリストを出力する関数です。
+
+        ##############################################################################
+
+        """
+        data = pl.DataFrame(
+            {
+                "unixtime": unix,
+                "datetime": date,
+                "STORAGE[Wh]": self.stbase_storage_list,
+                "MCH DISCHARGED CARGO QUANTITY[kg]": self.stbase_MCH_discharged_cargo_quantity_list,
+                "STORAGE PER[%]": self.stbase_st_per_list,
+                "BRANCH CONDITION": self.stbase_condition_list,
+            }
+        )
+
+        return data
 
     ####################################  メソッド  ######################################
 
@@ -64,6 +121,9 @@ class Storage_base:
         """
 
         self.storage = self.storage + TPGship1.supply_elect
+        self.MCH_discharged_cargo_quantity = (
+            self.MCH_discharged_cargo_quantity + TPGship1.supply_elect
+        )
 
         if TPGship1.supply_elect > 0:
             TPGship1.supply_elect = 0
