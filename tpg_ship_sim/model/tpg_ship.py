@@ -198,7 +198,7 @@ class TPG_ship:
         self.brance_condition = "start forecast"
         self.GS_gene_judge = 0
         self.electric_propulsion_storage_wh = self.electric_propulsion_max_storage_wh
-        self.trust_power_storage_state = str("no action")  # 電気推進機の状態
+        self.electric_propulsion_storage_state = str("no action")  # 電気推進機の状態
         self.wind_speed = 0
         self.wind_direction = 0
 
@@ -278,7 +278,7 @@ class TPG_ship:
         self.wind_state_list = []
 
         # 電気推進用蓄電池チェック用
-        self.trust_power_storage_state_list = []
+        self.electric_propulsion_storage_state_list = []
         self.trust_power_storage_list = []
 
         # 発電機抵抗チェック用
@@ -377,7 +377,9 @@ class TPG_ship:
         self.generator_drag_work_list.append(float(self.generator_drag_work))
 
         # 電気推進用蓄電池チェック用
-        self.trust_power_storage_state_list.append(self.trust_power_storage_state)
+        self.electric_propulsion_storage_state_list.append(
+            self.electric_propulsion_storage_state
+        )
         self.trust_power_storage_list.append(float(self.electric_propulsion_storage_wh))
 
     def get_outputs(self, unix_list, date_list):
@@ -413,7 +415,7 @@ class TPG_ship:
                 "ONBOARD POWER STORAGE STATUS": self.GS_storage_state_list,
                 "ONBOARD ENERGY STORAGE[Wh]": self.balance_gene_elect_list,
                 "ONBOARD ELECTRIC PROPULSION STORAGE[Wh] ": self.trust_power_storage_list,
-                "ONBOARD ELECTRIC PROPULSION STORAGE STATUS": self.trust_power_storage_state_list,
+                "ONBOARD ELECTRIC PROPULSION STORAGE STATUS": self.electric_propulsion_storage_state_list,
             }
         )
 
@@ -1414,13 +1416,17 @@ class TPG_ship:
                     if len(typhoon_data_forecast) > 1:
                         # データを台風補足時間が短い順に並び替える
                         typhoon_data_forecast = typhoon_data_forecast.select(
-                            pl.col("*").sort_by("TY_CATCH_TIME")
+                            pl.col("*").sort_by("TY_CATCH_TIME"), ascending=True
                         )
 
                         gene_time_max = typhoon_data_forecast[0, "TY_CATCH_TIME"]
                         typhoon_data_forecast = typhoon_data_forecast.filter(
                             pl.col("TY_CATCH_TIME") == gene_time_max
                         )
+
+        if (current_time <= 1564898400) and (current_time >= 1564812000):
+            print("corrent_time = ", current_time)
+            print(typhoon_data_forecast)
 
         return typhoon_data_forecast
 
@@ -1641,6 +1647,17 @@ class TPG_ship:
             # 電力消費の有無の判断
             self.GS_loss_judge = 0  # 0なら消費していない、1なら消費
 
+            if self.standby_lat == self.base_lat and self.standby_lon == self.base_lon:
+
+                self.supply_elect = self.storage
+                self.storage = 0
+
+                # 電気推進機用電力の供給
+                self.electric_propulsion_storage_wh = (
+                    self.electric_propulsion_max_storage_wh
+                )
+                self.electric_propulsion_storage_state = str("charge in Standby")
+
             # 発電船状態入力
             self.ship_state = 0  # 通常航行、待機 = 0 , 発電状態　= 1 , 台風追従　= 2 , 台風低速追従 = 2.5 , 拠点回航 = 3 , 待機位置回航 = 4
 
@@ -1752,7 +1769,7 @@ class TPG_ship:
                     1  # 台風に向かいながら拠点に帰港する行動のフラグ
                 )
 
-                self.return_base_action
+                self.return_base_action(time_step)
 
                 self.brance_condition = "tracking typhoon via base"
 
@@ -1764,7 +1781,7 @@ class TPG_ship:
                         1  # 台風に向かいながら拠点に帰港する行動のフラグ
                     )
 
-                    self.return_base_action
+                    self.return_base_action(time_step)
 
                     self.brance_condition = "tracking typhoon via base"
 
@@ -1807,7 +1824,8 @@ class TPG_ship:
         """
 
         self.distance_check = 0
-        self.trust_power_storage_state = str("no action")
+        self.electric_propulsion_storage_state = str("no action")
+        self.standby_via_base = 0
 
         # 蓄電量X％以上の場合
         if (
@@ -1900,7 +1918,6 @@ class TPG_ship:
 
         # 蓄電量90％未満の場合
         else:
-            standby_via_base = 0
 
             self.next_TY_lat = 0
             self.next_TY_lon = 0
@@ -2029,7 +2046,9 @@ class TPG_ship:
                     - self.loss_work / self.elect_trust_efficiency
                 )
                 self.loss_elect = self.loss_work / self.elect_trust_efficiency
-                self.trust_power_storage_state = str("use only power storage for trust")
+                self.electric_propulsion_storage_state = str(
+                    "use only power storage for trust"
+                )
             else:  # 電気推進用の電力で事足りない場合
                 loss_elect_trust = (
                     self.loss_work / self.elect_trust_efficiency
@@ -2044,7 +2063,7 @@ class TPG_ship:
                     + loss_elect_trust / self.MCH_to_elect_efficiency
                 )
                 loss_elect_trust = 0  # 念のため初期化
-                self.trust_power_storage_state = str(
+                self.electric_propulsion_storage_state = str(
                     "use power from trust's and MCH's storage"
                 )
 
@@ -2058,7 +2077,9 @@ class TPG_ship:
                     self.electric_propulsion_storage_wh + self.gene_elect
                 )
                 self.gene_elect = 0
-                self.trust_power_storage_state = str("charge power storage for trust")
+                self.electric_propulsion_storage_state = str(
+                    "charge power storage for trust"
+                )
             elif (
                 self.electric_propulsion_storage_wh
                 < self.electric_propulsion_max_storage_wh
@@ -2073,12 +2094,12 @@ class TPG_ship:
                 self.electric_propulsion_storage_wh = (
                     self.electric_propulsion_max_storage_wh
                 )
-                self.trust_power_storage_state = str(
+                self.electric_propulsion_storage_state = str(
                     "charge power storage for trust (full)"
                 )
             else:  # 電気推進用の電力を使用しておらず、発電量をそのまま蓄える場合
                 self.gene_elect = self.gene_elect * self.elect_to_MCH_efficiency
-                self.trust_power_storage_state = str("no charge")
+                self.electric_propulsion_storage_state = str("no charge")
         else:  # 何もしていない場合
             self.loss_elect = self.loss_work
 

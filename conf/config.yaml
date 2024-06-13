@@ -33,7 +33,7 @@ tpg_ship:
 
 forecaster:
   forecast_time: 120 # h
-  forecast_error_slope: 0.1 # 予報誤差（実際は誤差を計算するための一次関数の傾き）
+  forecast_error_slope: 0.0 # 予報誤差（実際は誤差を計算するための一次関数の傾き）
 
 storage_base:
   locate: [24, 153] # lat, lon

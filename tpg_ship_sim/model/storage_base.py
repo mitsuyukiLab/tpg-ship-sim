@@ -35,7 +35,6 @@ class Storage_base:
 
     ####################################  パラメータ  ######################################
 
-    max_storage = 0
     storage = 0
     call_num = 0
     call_ship1 = 0

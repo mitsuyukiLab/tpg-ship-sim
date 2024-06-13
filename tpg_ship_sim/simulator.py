@@ -149,7 +149,7 @@ def simulate(
         tpg_ship_1.hull_num,
     )  # 船体を最大船速で進めるための出力[W]
 
-    tpg_ship_1.forecast_time = forecaster.Forecaster.forecast_time
+    tpg_ship_1.forecast_time = typhoon_path_forecaster.forecast_time
 
     # 運搬船設定
     # support_ship.Support_ship.max_storage = tpg_ship_1.max_storage * 0.5
