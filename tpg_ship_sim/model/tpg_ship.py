@@ -768,7 +768,7 @@ class TPG_ship:
         time_interval = timestep / (2 * timestep)
 
         # 初期化
-        current_position = start_point
+        # current_position = start_point
         current_bearing = initial_bearing
         total_wind_work = 0
 
@@ -784,18 +784,13 @@ class TPG_ship:
             distance_travelled = (total_distance / timestep) * time
 
             # 現在の位置を計算
-            current_position = geodesic(kilometers=distance_travelled).destination(
-                point=start_point, bearing=current_bearing
-            )
+            # current_position = geodesic(kilometers=distance_travelled).destination(point=start_point, bearing=current_bearing)
 
             # 現在の方位角を更新
             current_bearing = self.calculate_initial_bearing()
 
             # 現在の位置の緯度経度
-            current_lat, current_lon = (
-                current_position.latitude,
-                current_position.longitude,
-            )
+            # current_lat, current_lon = (current_position.latitude,current_position.longitude)
 
             # 風速データを取得
             # ここでは風速データを取得するための関数 find_nearest_wind_point を使用します。
@@ -1424,10 +1419,6 @@ class TPG_ship:
                             pl.col("TY_CATCH_TIME") == gene_time_max
                         )
 
-        if (current_time <= 1564898400) and (current_time >= 1564812000):
-            print("corrent_time = ", current_time)
-            print(typhoon_data_forecast)
-
         return typhoon_data_forecast
 
     # timestep後の時刻における追従対象台風の座標取得
@@ -1585,8 +1576,8 @@ class TPG_ship:
             self.speed_kt = 0
 
             # 電気の積み下ろし
-            self.supply_elect = self.storage - self.max_storage * 0.1
-            self.storage = self.max_storage * 0.1
+            self.supply_elect = self.storage
+            self.storage = 0
 
             # 発電の有無の判断
             self.GS_gene_judge = 0  # 0なら発電していない、1なら発電
@@ -2111,6 +2102,9 @@ class TPG_ship:
 
         # 次の時刻での発電船保有電力
         self.storage = self.storage + self.gene_elect
+
+        if self.storage > self.max_storage:
+            self.storage = self.max_storage
 
         self.storage_percentage = self.storage / self.max_storage * 100
 
