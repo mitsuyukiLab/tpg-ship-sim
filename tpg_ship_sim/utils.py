@@ -649,6 +649,34 @@ def draw_graph(
     for i in range(len(day)):
         daylist.append((day[i] - day[0]) / 86400)
 
+    # TPGship_dataから運用日数を取得
+    start_time = TPGship_data["unixtime"][0]
+    end_time = TPGship_data["unixtime"][len(TPGship_data) - 1]
+    start_date = datetime.fromtimestamp(start_time, UTC)
+    end_date = datetime.fromtimestamp(end_time, UTC)
+    operation_days = (end_date - start_date).days
+
+    # TPGship_dataのONBOARD POWER STORAGE PER[%]の0でない値と対応するONBOARD ENERGY STORAGE[Wh]の値からONBOARD POWER STORAGE PER[%]が100％の時のONBOARD ENERGY STORAGE[Wh]を計算する
+    onboardene = TPGship_data["ONBOARD ENERGY STORAGE[Wh]"]
+    onboardper = TPGship_data["ONBOARD POWER STORAGE PER[%]"]
+    for i in range(len(onboardper)):
+        if onboardper[i] != 0:
+            onboardene_100 = onboardene[i] / (onboardper[i] / 100)
+            break
+
+    # "TOTAL POWER GENERATION[Wh]"の最大値を取得し、GWhに変換して50GWh刻みに切り上げる
+    max_gene = max(totalgene)
+    max_gene = int(max_gene / 10**9)
+    max_gene = (max_gene // 50 + 1) * 50
+
+    # stBASE_dataのSTORAGE PER[%]の0でない値と対応するSTORAGE[Wh]の値からSTORAGE PER[%]が100％の時のSTORAGE[Wh]を計算する
+    basestorage = stBASE_data["STORAGE[Wh]"]
+    basestorageper = stBASE_data["STORAGE PER[%]"]
+    for i in range(len(basestorageper)):
+        if basestorageper[i] != 0:
+            basestorage_100 = basestorage[i] / (basestorageper[i] / 100)
+            break
+
     # グラフの表示
     plt.style.use(["science", "no-latex", "high-vis", "grid"])  # latexなしで動くように
     plt.rcParams["font.size"] = 20
@@ -656,8 +684,8 @@ def draw_graph(
     fig = plt.figure(figsize=(10, 16))  # プロット領域の作成（matplotlib）
 
     ax1 = fig.add_subplot(3, 1, 1)
-    ax1_xmin, ax1_xmax = 0, 365
-    ax1_ymin, ax1_ymax = 0, 75
+    ax1_xmin, ax1_xmax = 0, operation_days
+    ax1_ymin, ax1_ymax = 0, onboardene_100 / 10**9 + 5
     ax1.set_xlim(xmin=ax1_xmin, xmax=ax1_xmax)  # x軸の範囲を指定
     ax1.set_ylim(ymin=ax1_ymin, ymax=ax1_ymax)  # y軸の範囲を指定
     ax1.set(xlabel="Operation Time[Day]")  # x軸のラベル
@@ -665,8 +693,8 @@ def draw_graph(
     ax1.plot(daylist, obe, label="ONBOARD", linewidth=3)
 
     ax2 = fig.add_subplot(3, 1, 2)
-    ax2_xmin, ax2_xmax = 0, 365
-    ax2_ymin, ax2_ymax = 0, 350
+    ax2_xmin, ax2_xmax = 0, operation_days
+    ax2_ymin, ax2_ymax = 0, max_gene
     ax2.set_xlim(xmin=ax2_xmin, xmax=ax2_xmax)  # x軸の範囲を指定
     ax2.set_ylim(ymin=ax2_ymin, ymax=ax2_ymax)  # y軸の範囲を指定
     ax2.set(xlabel="Operation Time[Day]")  # x軸のラベル
@@ -674,8 +702,8 @@ def draw_graph(
     ax2.plot(daylist, tg, label="TOTAL", linewidth=3)
 
     ax3 = fig.add_subplot(3, 1, 3)
-    ax3_xmin, ax3_xmax = 0, 365
-    ax3_ymin, ax3_ymax = 0, 100
+    ax3_xmin, ax3_xmax = 0, operation_days
+    ax3_ymin, ax3_ymax = 0, basestorage_100 / 10**9 + 5
     ax3.set_xlim(xmin=ax3_xmin, xmax=ax3_xmax)  # x軸の範囲を指定
     ax3.set_ylim(ymin=ax3_ymin, ymax=ax3_ymax)  # y軸の範囲を指定
     ax3.set(xlabel="Operation Time[Day]")  # x軸のラベル

@@ -1,5 +1,5 @@
 env:
-  typhoon_data_path: "data/typhoon_path/typhoon_data_2019_6_interval.csv"
+  typhoon_data_path: "data/typhoon_path/combined_typhoon_data_2019-2023.csv"
   
 tpg_ship:
   #TPG ship performance model

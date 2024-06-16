@@ -7,7 +7,7 @@ from tqdm import tqdm
 from tpg_ship_sim.model import forecaster, tpg_ship
 
 
-def get_TY_start_time(year, typhoon_path_forecaster):
+def get_TY_start_time(typhoon_data_path):
     """
     ############################## def get_TY_start_time ##############################
 
@@ -17,15 +17,13 @@ def get_TY_start_time(year, typhoon_path_forecaster):
 
     本来は発生したごとに逐次記録すれば良いのですが、そのプログラムを作っても嵩張るだけだと思ったので、
 
-    予報期間に関係なく発生時間は取得できるものとしてリスト化することにしました。
+    予報期間に関係なく発生時間は取得できるものとして辞書化することにしました。台風番号をキーに、最初の発生時間を値を引けます。
 
-    add_unixtimeで処理したデータが必要です。
 
     ##############################################################################
 
     引数 :
-        year (int) : シミュレーションを行う年
-        typhoon_path_forecaster (dataflame) : 過去の台風のデータ(unixtime追加後)
+        typhoon_data_path (dataflame) : 過去の台風のデータのパス
 
     戻り値 :
         TY_occurrence_time (list) : 各台風の発生時刻のリスト
@@ -33,23 +31,22 @@ def get_TY_start_time(year, typhoon_path_forecaster):
     #############################################################################
     """
 
-    TY_num = typhoon_path_forecaster.n_unique("TYPHOON NUMBER")
+    # CSVファイルの読み込み
+    df = pl.read_csv(typhoon_data_path)
 
-    # 台風発生時刻を入れておくリスト
-    TY_occurrence_time = []
+    # 発生時間（ユニックスタイム）でソート
+    df = df.sort("unixtime")
 
-    # 各台風番号で開始時刻の取得
-    for i in range(TY_num):
-        TY_bangou = (year - 2000) * 100 + i + 1
-        typhoon_data_by_num = typhoon_path_forecaster.filter(
-            pl.col("TYPHOON NUMBER") == TY_bangou
-        )
-        typhoon_data_by_num = typhoon_data_by_num.select(
-            pl.col("*").sort_by("unixtime")
-        )
-        TY_occurrence_time.append(typhoon_data_by_num[0, "unixtime"])
+    # 台風番号をキーに、最初の発生時間を値とする辞書を作成
+    typhoon_start_times = df.groupby("TYPHOON NUMBER").agg(pl.col("unixtime").min())
 
-    return TY_occurrence_time
+    # 辞書に変換
+    typhoon_start_times_dict = {
+        row["TYPHOON NUMBER"]: row["unixtime"]
+        for row in typhoon_start_times.iter_rows(named=True)
+    }
+
+    return typhoon_start_times_dict
 
 
 def cal_dwt(storage, storage_method):
@@ -105,14 +102,16 @@ def simulate(
     support_ship_2_log_file_path,
 ) -> None:
 
-    year = 2019
+    start_year = 2019
+    end_year = 2023
     time_step = 6
     UTC = timezone(timedelta(hours=+0), "UTC")
-    datetime_1_1 = datetime(year, 1, 1, 0, 0, 0, tzinfo=tz.gettz("UTC"))
+    datetime_1_1 = datetime(start_year, 1, 1, 0, 0, 0, tzinfo=tz.gettz("UTC"))
     current_time = int(datetime_1_1.timestamp())
-    month = datetime_1_1.month
+    year = datetime.fromtimestamp(current_time, UTC).year
+    month = datetime.fromtimestamp(current_time, UTC).month
     # 終了時刻
-    datetime_12_31 = datetime(year, 12, 31, 18, 0, 0, tzinfo=tz.gettz("UTC"))
+    datetime_12_31 = datetime(end_year, 12, 31, 18, 0, 0, tzinfo=tz.gettz("UTC"))
     unixtime_12_31 = int(datetime_12_31.timestamp())
     # unixtimeでの時間幅
     time_step_unix = 3600 * time_step
@@ -161,7 +160,7 @@ def simulate(
     tpg_ship_1.base_lat = st_base.locate[0]
     tpg_ship_1.base_lon = st_base.locate[1]
 
-    tpg_ship_1.TY_start_time_list = get_TY_start_time(year, typhoon_data)
+    tpg_ship_1.TY_start_time_list = get_TY_start_time(typhoon_data_path)
     # 待機位置に関する設定
     tpg_ship_1.standby_lat = st_base.locate[0]
     tpg_ship_1.standby_lon = st_base.locate[1]
@@ -204,6 +203,8 @@ def simulate(
     spSHIP2_data = support_ship_2.get_outputs(unix, date)
 
     for data_num in tqdm(range(record_count), desc="Simulating..."):
+
+        year = datetime.fromtimestamp(current_time, UTC).year
 
         # 月毎の風データの取得
         if month != datetime.fromtimestamp(current_time, UTC).month:

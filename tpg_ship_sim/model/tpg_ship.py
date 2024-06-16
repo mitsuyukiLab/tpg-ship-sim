@@ -1249,16 +1249,10 @@ class TPG_ship:
             # 今回は良い方法が思いつかなかったので全データから台風発生時刻を取得する。本来は発生時刻を記録しておきたい。
 
             # 台風発生時刻の取得
-            # 台風発生時刻を入れておくリスト
-            TY_occurrence_time = []
             # 各台風番号で開始時刻の取得
-            TY_occurrence_time = self.TY_start_time_list
 
             data_num = len(typhoon_data_forecast)
 
-            # nd_time_list = []
-            # start_time_list = []
-            # shori = []
             # データごとに予測発電時間を入力する
             for i in range(data_num):
                 # 仮の発電開始時間
@@ -1279,10 +1273,10 @@ class TPG_ship:
                 # 当該台風の予報内での終了時刻
                 end_time_forecast_TY = TY_forecast_end_time[data_reference_num]
                 # 当該台風の発生時刻
-                start_time_forecast_TY = TY_occurrence_time[
-                    TY_predict_bangou - (year - 2000) * 100 - 1
-                ]
-                # start_time_list.append(start_time_forecast_TY)
+                start_time_forecast_TY = self.TY_start_time_list.get(
+                    TY_predict_bangou, None
+                )
+
                 # 台風最終予想時刻による場合分け。予報期間終了時刻と同じ場合はその後も台風が続くものとして、平均存続時間を用いる。
                 # 平均存続時間よりも長く続いている台風の場合は最終予想時刻までを発電するものと仮定する。
                 if (end_time_forecast_TY == last_forecast_time) and (
@@ -1900,8 +1894,8 @@ class TPG_ship:
                         self.next_ship_TY_dis = np.nan
 
                     if (
-                        target_TY_lat != comparison_lat
-                        or target_TY_lon != comparison_lon
+                        self.target_TY_lat != comparison_lat
+                        or self.target_TY_lon != comparison_lon
                     ):
 
                         # 目標地点が変わりそうなら台風追従行動の方で再検討
@@ -1950,8 +1944,8 @@ class TPG_ship:
 
                 self.typhoon_chase_action(time_step)
 
-                target_TY_lat = self.target_TY_data[0, "FORE_LAT"]
-                target_TY_lon = self.target_TY_data[0, "FORE_LAT"]
+                self.target_TY_lat = self.target_TY_data[0, "FORE_LAT"]
+                self.target_TY_lon = self.target_TY_data[0, "FORE_LAT"]
 
                 ####
 
