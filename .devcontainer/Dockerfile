@@ -34,4 +34,5 @@ RUN pip install tqdm
 RUN pip install flake8 black isort
 
 # hydra-core
-RUN pip install hydra-core --upgrade
+RUN pip install hydra-core --upgrade \
+    hydra-core optuna
