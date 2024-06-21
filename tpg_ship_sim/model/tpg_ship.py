@@ -141,6 +141,89 @@ class TPG_ship:
         self.govia_base_judge_energy_storage_per = govia_base_judge_energy_storage_per
         self.judge_time_times = judge_time_times
 
+    # __init__で定義されたパラメータをデータフレームとして記録する関数
+    def get_outputs_for_evaluation(self):
+        """
+        ############################ def get_outputs_for_evaluation ############################
+
+        [ 説明 ]
+
+        台風発電船のパラメータをデータフレームとして記録する関数です。
+
+        ##############################################################################
+
+        """
+
+        data = pl.DataFrame(
+            {
+                "ship_lat": [self.ship_lat],
+                "ship_lon": [self.ship_lon],
+                "hull_num": [self.hull_num],
+                "storage_method": [self.storage_method],
+                "max_storage": [self.max_storage],
+                "electric_propulsion_max_storage_wh": [
+                    self.electric_propulsion_max_storage_wh
+                ],
+                "elect_trust_efficiency": [self.elect_trust_efficiency],
+                "MCH_to_elect_efficiency": [self.MCH_to_elect_efficiency],
+                "elect_to_MCH_efficiency": [self.elect_to_MCH_efficiency],
+                "generator_output_w": [self.generator_output_w],
+                "generator_efficiency": [self.generator_efficiency],
+                "generator_drag_coefficient": [self.generator_drag_coefficient],
+                "generator_pillar_chord": [self.generator_pillar_chord],
+                "generator_pillar_max_tickness": [self.generator_pillar_max_tickness],
+                "generator_pillar_width": [self.generator_pillar_width],
+                "generator_num": [self.generator_num],
+                "sail_num": [self.sail_num],
+                "sail_area": [self.sail_area],
+                "sail_steps": [self.sail_steps],
+                "nomal_ave_speed": [self.nomal_ave_speed],
+                "max_speed": [self.max_speed],
+                "generating_speed_kt": [self.generating_speed_kt],
+                "forecast_weight": [self.forecast_weight],
+                "typhoon_effective_range": [self.typhoon_effective_range],
+                "govia_base_judge_energy_storage_per": [
+                    self.govia_base_judge_energy_storage_per
+                ],
+                "judge_time_times": [self.judge_time_times],
+                "total_gene_elect": self.total_gene_elect_list[-1],
+            }
+        )
+
+        data = data.with_columns(
+            [
+                pl.col("ship_lat").cast(pl.Float64),
+                pl.col("ship_lon").cast(pl.Float64),
+                pl.col("hull_num").cast(pl.Int64),
+                pl.col("storage_method").cast(pl.Int64),
+                pl.col("max_storage").cast(pl.Float64),
+                pl.col("electric_propulsion_max_storage_wh").cast(pl.Float64),
+                pl.col("elect_trust_efficiency").cast(pl.Float64),
+                pl.col("MCH_to_elect_efficiency").cast(pl.Float64),
+                pl.col("elect_to_MCH_efficiency").cast(pl.Float64),
+                pl.col("generator_output_w").cast(pl.Float64),
+                pl.col("generator_efficiency").cast(pl.Float64),
+                pl.col("generator_drag_coefficient").cast(pl.Float64),
+                pl.col("generator_pillar_chord").cast(pl.Float64),
+                pl.col("generator_pillar_max_tickness").cast(pl.Float64),
+                pl.col("generator_pillar_width").cast(pl.Float64),
+                pl.col("generator_num").cast(pl.Int64),
+                pl.col("sail_num").cast(pl.Int64),
+                pl.col("sail_area").cast(pl.Float64),
+                pl.col("sail_steps").cast(pl.Int64),
+                pl.col("nomal_ave_speed").cast(pl.Float64),
+                pl.col("max_speed").cast(pl.Float64),
+                pl.col("generating_speed_kt").cast(pl.Float64),
+                pl.col("forecast_weight").cast(pl.Float64),
+                pl.col("typhoon_effective_range").cast(pl.Float64),
+                pl.col("govia_base_judge_energy_storage_per").cast(pl.Float64),
+                pl.col("judge_time_times").cast(pl.Float64),
+                pl.col("total_gene_elect").cast(pl.Float64),
+            ]
+        )
+
+        return data
+
     ####################################  状態量  ######################################
 
     # 状態量の初期値入力

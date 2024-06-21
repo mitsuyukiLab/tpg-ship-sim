@@ -14,7 +14,7 @@ RUN apt-get update && apt-get install -y \
 RUN pip install --upgrade pip
 RUN pip install --upgrade setuptools
 
-RUN python -m pip install numpy \
+RUN python -m pip install numpy==1.26.0 \
     distance \
     geopy \
     folium \

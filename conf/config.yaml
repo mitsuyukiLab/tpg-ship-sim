@@ -1,5 +1,8 @@
 env:
+  #typhoon_data_path: "data/typhoon_path/typhoon_data_2019_6_interval.csv"
   typhoon_data_path: "data/typhoon_path/combined_typhoon_data_2019-2023.csv"
+  simulation_start_time: "2019-01-01 00:00:00"
+  simulation_end_time: "2023-12-31 18:00:00"
   
 tpg_ship:
   #TPG ship performance model
@@ -51,6 +54,7 @@ support_ship_2:
 
 output_env:
   tpg_ship_log_file_name: "tpg_ship_1.csv"
+  tpg_ship_param_log_file_name: "tpg_ship_param_1.csv"
   storage_base_log_file_name: "storage_base_1.csv"
   support_ship_1_log_file_name: "support_ship_1.csv"
   support_ship_2_log_file_name: "support_ship_2.csv"
