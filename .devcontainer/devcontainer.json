@@ -19,7 +19,8 @@
                 "ms-toolsai.jupyter",
                 "ms-python.black-formatter",
                 "ms-python.flake8",
-                "ms-python.isort"
+                "ms-python.isort",
+                "GrapeCity.gc-excelviewer"
             ]
         }
     }
