@@ -45,6 +45,7 @@ def main(cfg: DictConfig) -> None:
     sail_num = cfg.tpg_ship.sail_num
     sail_area = cfg.tpg_ship.sail_area
     sail_steps = cfg.tpg_ship.sail_steps
+    sail_weight = cfg.tpg_ship.sail_weight
     ship_return_speed_kt = cfg.tpg_ship.ship_return_speed_kt
     ship_max_speed_kt = cfg.tpg_ship.ship_max_speed_kt
     ship_generate_speed_kt = cfg.tpg_ship.ship_generate_speed_kt
@@ -73,6 +74,7 @@ def main(cfg: DictConfig) -> None:
         sail_num,
         sail_area,
         sail_steps,
+        sail_weight,
         ship_return_speed_kt,
         ship_max_speed_kt,
         ship_generate_speed_kt,

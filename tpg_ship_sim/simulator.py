@@ -66,19 +66,32 @@ def cal_dwt(storage, storage_method):
     return dwt
 
 
-def cal_maxspeedpower(max_speed, storage, storage_method, body_num):
+def cal_maxspeedpower(
+    max_speed,
+    sail_num,
+    sail_weight,
+    storage1,
+    storage1_method,
+    storage2,
+    storage2_method,
+    body_num,
+):
 
-    dwt = cal_dwt(storage, storage_method) / body_num
+    main_storage_dwt = cal_dwt(storage1, storage1_method)
+    electric_propulsion_storage_dwt = cal_dwt(storage2, storage2_method)
+    sail_weight_sum = sail_weight * sail_num
 
-    if storage_method == 1:  # 電気貯蔵
+    sum_dwt_t = main_storage_dwt + electric_propulsion_storage_dwt + sail_weight_sum
+
+    if storage1_method == 1:  # 電気貯蔵
         # バルカー型
         k = 1.7
-        power = k * (dwt ** (2 / 3)) * (max_speed**3) * body_num
+        power = k * (sum_dwt_t ** (2 / 3)) * (max_speed**3) * body_num
 
-    elif storage_method == 2:  # 水素貯蔵
+    elif storage1_method == 2:  # 水素貯蔵
         # タンカー型
         k = 2.2
-        power = k * (dwt ** (2 / 3)) * (max_speed**3) * body_num
+        power = k * (sum_dwt_t ** (2 / 3)) * (max_speed**3) * body_num
 
     else:
         print("cannot cal")
@@ -143,8 +156,12 @@ def simulate(
     # 発電船パラメータ設定
     tpg_ship_1.max_speed_power = cal_maxspeedpower(
         tpg_ship_1.max_speed,
+        tpg_ship_1.sail_num,
+        tpg_ship_1.sail_weight,
         tpg_ship_1.max_storage,
         tpg_ship_1.storage_method,
+        tpg_ship_1.electric_propulsion_max_storage,
+        1,
         tpg_ship_1.hull_num,
     )  # 船体を最大船速で進めるための出力[W]
 

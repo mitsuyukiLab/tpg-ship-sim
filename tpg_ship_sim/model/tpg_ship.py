@@ -104,6 +104,7 @@ class TPG_ship:
         sail_num,
         sail_area,
         sail_steps,
+        sail_weight,
         ship_return_speed_kt,
         ship_max_speed_kt,
         ship_generate_speed_kt,
@@ -132,6 +133,7 @@ class TPG_ship:
         self.sail_num = sail_num
         self.sail_area = sail_area
         self.sail_steps = sail_steps
+        self.sail_weight = sail_weight
         self.nomal_ave_speed = ship_return_speed_kt
         self.max_speed = ship_max_speed_kt
         self.generating_speed_kt = ship_generate_speed_kt
@@ -177,6 +179,7 @@ class TPG_ship:
                 "sail_num": [self.sail_num],
                 "sail_area": [self.sail_area],
                 "sail_steps": [self.sail_steps],
+                "sail_weight": [self.sail_weight],
                 "nomal_ave_speed": [self.nomal_ave_speed],
                 "max_speed": [self.max_speed],
                 "generating_speed_kt": [self.generating_speed_kt],
@@ -211,6 +214,7 @@ class TPG_ship:
                 pl.col("sail_num").cast(pl.Int64),
                 pl.col("sail_area").cast(pl.Float64),
                 pl.col("sail_steps").cast(pl.Int64),
+                pl.col("sail_weight").cast(pl.Float64),
                 pl.col("nomal_ave_speed").cast(pl.Float64),
                 pl.col("max_speed").cast(pl.Float64),
                 pl.col("generating_speed_kt").cast(pl.Float64),

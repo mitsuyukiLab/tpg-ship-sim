@@ -24,6 +24,7 @@ tpg_ship:
   sail_num: 30 # 帆の数
   sail_area: 880 # 帆の面積[m^2]
   sail_steps: 5 # 帆の段数
+  sail_weight: 120 # 帆の重さ[t]
   ship_return_speed_kt: 8 # 拠点帰港時の船速[kt]
   ship_max_speed_kt: 20 # 台風発電船の最大船速[kt]
   ship_generate_speed_kt: 17.5 # 台風発電船の発電時の船速[kt]
