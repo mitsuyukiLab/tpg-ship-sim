@@ -174,7 +174,7 @@ def simulate(
         tpg_ship_1.sail_weight,
         tpg_ship_1.max_storage,
         tpg_ship_1.storage_method,
-        tpg_ship_1.electric_propulsion_max_storage,
+        tpg_ship_1.electric_propulsion_max_storage_wh,
         1,
         tpg_ship_1.hull_num,
     )  # 船体を最大船速で進めるための出力[W]
